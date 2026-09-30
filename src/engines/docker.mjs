@@ -12,7 +12,7 @@
  * address, and run ONLY that resolved file. Full control, no guesswork.
  */
 
-import { mkdir, writeFile, rm, readdir } from "node:fs/promises";
+import { mkdir, writeFile, rm, rmdir, readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { has, run, capture, waitForPort } from "../run.mjs";
@@ -215,11 +215,14 @@ export async function deploy(entry, opts) {
   const { id, bindIp, noEgress = false, dryRun = false, onLog } = opts;
   await preflight();
   const dir = path.join(LABS_DIR, id);
+  // A dry run must not leave anything behind. Clone-based sources still need a
+  // working directory (Compose has to parse the upstream project to resolve it),
+  // so we create it, then remove it again below if the dry run wrote nothing.
   await mkdir(dir, { recursive: true });
 
   const { spec, cwd, exposed } = await buildSpec(entry, { dir, bindIp, noEgress, onLog });
   const file = path.join(dir, RESOLVED);
-  await writeFile(file, JSON.stringify(spec, null, 2), "utf-8");
+  if (!dryRun) await writeFile(file, JSON.stringify(spec, null, 2), "utf-8");
 
   const project = projectFor(id);
   const services = exposed.map((e) => ({
@@ -228,6 +231,8 @@ export async function deploy(entry, opts) {
   }));
 
   if (dryRun) {
+    // Leave the store exactly as we found it when nothing was materialised.
+    await rmdir(dir).catch(() => {});
     return { dryRun: true, dir, file, project, bindIp, services, spec };
   }
 
