@@ -1,0 +1,4 @@
+{
+  "//": "Storage root for lab clones, the vulhub cache and Vagrant boxes. Set to a roomy disk because $HOME sits on a near-full root partition on this host. Override per-run with RTLAB_HOME; delete this file to fall back to ~/.rtlab.",
+  "home": "/media/nested/SamsungEvo/Test-Projects/detection-platform/.rtlab"
+}

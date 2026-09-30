@@ -52,8 +52,31 @@ cd redteam-labs
 Requires Node ≥ 20. Docker + Compose for container labs; Vagrant + VirtualBox for VM labs.
 `rtlab doctor` tells you exactly what's missing and which addresses you can bind to.
 
-> **Small `$HOME` partition?** Labs are stored in `~/.rtlab`. Point it at a bigger
-> disk with `export RTLAB_HOME=/path/to/disk/.rtlab`.
+### Where labs are stored
+
+Lab clones, the vulhub cache and Vagrant box images all live under one root, resolved
+in this order:
+
+| Precedence | Source | Use it for |
+| --- | --- | --- |
+| 1 | `RTLAB_HOME` env var | one-off override |
+| 2 | `rtlab.config.json` → `{ "home": "…" }` | the persistent setting |
+| 3 | `~/.rtlab` | portable default |
+
+Box images are multi-GB, so `rtlab` also pins **Vagrant's own cache** (`VAGRANT_HOME`)
+inside this root — otherwise Vagrant would fill `~/.vagrant.d` regardless of where the
+labs live. Set it once if your home partition is small:
+
+```json
+{ "home": "/mnt/big-disk/.rtlab" }
+```
+
+`rtlab doctor` prints the resolved root, which source it came from, and free space.
+
+> **Container images are the one exception.** Docker stores images under its daemon's
+> `data-root` (usually `/var/lib/docker`), which `rtlab` cannot relocate per-run —
+> `doctor` reports that filesystem separately and warns when it is too full to pull.
+> Move it via the Docker daemon's `data-root` setting if needed.
 
 ## Usage
 

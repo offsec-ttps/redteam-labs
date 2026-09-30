@@ -102,14 +102,29 @@ async function cmdDoctor() {
     [{ key: "address", label: "ADDRESS", color: grn }, { key: "iface", label: "INTERFACE" }, { key: "hint", label: "NOTE" }]);
 
   plain("");
-  step("Capacity");
+  step("Storage");
   const free = await freeDiskGB(state.RT_HOME).catch(() => null);
-  info(`lab store: ${state.LABS_DIR}`);
+  info(`root        ${state.RT_HOME}   ${dim(`(from ${state.RT_HOME_SOURCE})`)}`);
+  info(`labs        ${state.LABS_DIR}`);
+  info(`vagrant     ${state.VAGRANT_HOME}   ${dim("(box cache)")}`);
   if (free === null) warn("could not determine free disk");
   else if (free < MIN_FREE_GB) warn(`${free}GB free — below the ${MIN_FREE_GB}GB minimum; deploys will be refused`);
   else ok(`${free}GB free`);
+  // Docker's image store is a daemon-level setting, so rtlab cannot relocate it.
+  const dockerRoot = await capture("docker", ["info", "--format", "{{.DockerRootDir}}"], 8000);
+  if (dockerRoot) {
+    const dfree = await freeDiskGB(dockerRoot).catch(() => null);
+    const note = dfree !== null && dfree < MIN_FREE_GB ? ylw(`${dfree}GB free — container images may not fit`) : dim(`${dfree ?? "?"}GB free`);
+    info(`docker      ${dockerRoot}   ${note}`);
+    if (dfree !== null && dfree < MIN_FREE_GB) {
+      info(dim("  container images live here, not in the lab store — move them with the daemon's data-root setting"));
+    }
+  }
 
-  out({ tools: results, bindIps: ips, freeGB: free, labsDir: state.LABS_DIR });
+  out({
+    tools: results, bindIps: ips, freeGB: free,
+    storage: { root: state.RT_HOME, source: state.RT_HOME_SOURCE, labs: state.LABS_DIR, vagrant: state.VAGRANT_HOME, dockerRoot },
+  });
 }
 
 // ── catalog ──────────────────────────────────────────────────────────────────

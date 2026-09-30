@@ -14,7 +14,14 @@ import { mkdir, writeFile, rm } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { has, run, capture } from "../run.mjs";
-import { LABS_DIR } from "../state.mjs";
+import { LABS_DIR, VAGRANT_HOME } from "../state.mjs";
+
+/**
+ * Box images are multi-GB and Vagrant caches them in ~/.vagrant.d by default —
+ * which fills $HOME on hosts whose home partition is small. Pin the cache beside
+ * the lab store instead, so a VM lab consumes space where the labs live.
+ */
+const vagrantEnv = { VAGRANT_HOME };
 
 export async function preflight() {
   if (!(await has("vagrant"))) throw new Error("`vagrant` not found — install Vagrant, then retry.");
@@ -80,19 +87,19 @@ export async function deploy(entry, opts) {
   await writeFile(path.join(dir, "Vagrantfile"), vf, "utf-8");
 
   onLog?.(`vagrant up — box "${src.box}" downloads on first use (multi-GB)…`);
-  await run("vagrant", ["up", "--provider", "virtualbox"], { cwd: dir, timeout: 3_600_000, onLog });
+  await run("vagrant", ["up", "--provider", "virtualbox"], { cwd: dir, timeout: 3_600_000, env: vagrantEnv, onLog });
   return { dir, vmName, privateIp, services, ready: true, status: "running" };
 }
 
 export async function start(dep, { onLog } = {}) {
-  await run("vagrant", ["up", "--provider", "virtualbox"], { cwd: dep.dir, timeout: 1_800_000, onLog });
+  await run("vagrant", ["up", "--provider", "virtualbox"], { cwd: dep.dir, timeout: 1_800_000, env: vagrantEnv, onLog });
 }
 export async function stop(dep, { onLog } = {}) {
-  await run("vagrant", ["halt"], { cwd: dep.dir, timeout: 600_000, onLog });
+  await run("vagrant", ["halt"], { cwd: dep.dir, timeout: 600_000, env: vagrantEnv, onLog });
 }
 export async function destroy(dep, { onLog } = {}) {
   if (dep.dir && existsSync(path.join(dep.dir, "Vagrantfile"))) {
-    await run("vagrant", ["destroy", "-f"], { cwd: dep.dir, timeout: 900_000, onLog })
+    await run("vagrant", ["destroy", "-f"], { cwd: dep.dir, timeout: 900_000, env: vagrantEnv, onLog })
       .catch((e) => onLog?.(`destroy warning: ${e.message}`));
   }
   if (dep.dir) await rm(dep.dir, { recursive: true, force: true }).catch(() => {});

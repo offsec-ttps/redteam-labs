@@ -7,15 +7,44 @@
  */
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-export const RT_HOME = process.env.RTLAB_HOME || path.join(homedir(), ".rtlab");
+const INSTALL_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+/**
+ * Where labs, box images and the vulhub cache live. Resolution order:
+ *   1. RTLAB_HOME env var                    — per-invocation override
+ *   2. rtlab.config.json  { "home": "..." }  — persistent, next to the install
+ *   3. ~/.rtlab                              — portable default
+ *
+ * Order matters on hosts where $HOME sits on a small partition: point `home` at a
+ * roomy disk once in the config file and every lab, Vagrant box and clone follows.
+ */
+function resolveHome() {
+  if (process.env.RTLAB_HOME) {
+    return { dir: path.resolve(process.env.RTLAB_HOME), source: "RTLAB_HOME env" };
+  }
+  try {
+    const cfg = JSON.parse(readFileSync(path.join(INSTALL_DIR, "rtlab.config.json"), "utf-8"));
+    if (cfg?.home) return { dir: path.resolve(cfg.home), source: "rtlab.config.json" };
+  } catch { /* no config, or unreadable — fall through */ }
+  return { dir: path.join(homedir(), ".rtlab"), source: "default (~/.rtlab)" };
+}
+
+const resolved = resolveHome();
+export const RT_HOME = resolved.dir;
+export const RT_HOME_SOURCE = resolved.source;
 export const LABS_DIR = path.join(RT_HOME, "labs");
+/** Vagrant box cache — kept beside the labs so multi-GB boxes never land on $HOME. */
+export const VAGRANT_HOME = path.join(RT_HOME, "vagrant");
 const STATE = path.join(RT_HOME, "state.json");
 
 export async function ensureDirs() {
   await mkdir(LABS_DIR, { recursive: true });
+  await mkdir(VAGRANT_HOME, { recursive: true });
 }
 
 async function readAll() {
