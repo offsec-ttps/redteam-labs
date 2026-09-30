@@ -68,8 +68,13 @@ inside this root — otherwise Vagrant would fill `~/.vagrant.d` regardless of w
 labs live. Set it once if your home partition is small:
 
 ```json
-{ "home": "/mnt/big-disk/.rtlab" }
+{ "home": "/path/to/big-disk/redteam-labs/.rtlab" }
 ```
+
+Keep the store **beside this tool**, not inside another project: a `git clean -xfd`
+in that project would delete the whole store, since it would be an ignored directory
+there. The default `.rtlab/` here is gitignored, so runtime state never shows up in
+`git status`.
 
 `rtlab doctor` prints the resolved root, which source it came from, and free space.
 

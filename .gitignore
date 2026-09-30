@@ -5,3 +5,6 @@ labs/
 
 # cloud credentials — never commit
 rtlab.creds.json
+
+# local lab store (clones, vulhub cache, Vagrant boxes)
+.rtlab/
