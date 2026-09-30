@@ -19,9 +19,13 @@ export async function has(cmd, args = ["--version"]) {
 }
 
 /** Capture a command's stdout (trimmed), or null when it fails. */
-export async function capture(cmd, args, timeout = 10000) {
-  try { const { stdout } = await execFileAsync(cmd, args, { timeout }); return stdout.trim(); }
-  catch { return null; }
+export async function capture(cmd, args, timeout = 10000, { cwd, env } = {}) {
+  try {
+    const { stdout } = await execFileAsync(cmd, args, {
+      timeout, cwd, env: env ? { ...process.env, ...env } : undefined,
+    });
+    return stdout.trim();
+  } catch { return null; }
 }
 
 /**

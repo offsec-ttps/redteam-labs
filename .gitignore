@@ -2,3 +2,6 @@ node_modules/
 labs/
 *.log
 .DS_Store
+
+# cloud credentials — never commit
+rtlab.creds.json

@@ -24,6 +24,8 @@ import * as state from "../src/state.mjs";
 import { allEntries, findEntry, filterEntries, searchEntries, DOMAINS, SERVICES, SERVICE_APPS } from "../src/catalog/index.mjs";
 import * as dockerEngine from "../src/engines/docker.mjs";
 import * as vagrantEngine from "../src/engines/vagrant.mjs";
+import * as terraformEngine from "../src/engines/terraform.mjs";
+import { credsStatus, CREDS_FILE_PATH } from "../src/creds.mjs";
 
 const BOOL = new Set(["--json", "--yes", "-y", "--no-color", "--help", "-h", "--all",
   "--dry-run", "--no-egress", "--follow", "-f", "--quiet"]);
@@ -46,7 +48,9 @@ configureUi({ color: !flags["no-color"], json: flags.json, yes: flags.yes || fla
 const DRY = !!flags["dry-run"];
 const MIN_FREE_GB = Number(process.env.RTLAB_MIN_FREE_GB || 10);
 
-const engineFor = (entry) => (entry.engine === "vm" ? vagrantEngine : dockerEngine);
+const ENGINES = { vm: vagrantEngine, terraform: terraformEngine, docker: dockerEngine };
+const engineFor = (entry) => ENGINES[entry.engine] || dockerEngine;
+const engineForDep = (dep) => ENGINES[dep.engine] || dockerEngine;
 const logger = (line) => { if (!isJson() && !flags.quiet) console.log(`    ${dim(line)}`); };
 const slug = (s) => String(s).replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
 
@@ -71,6 +75,7 @@ ${bold("Lifecycle")}
 
 ${bold("Other")}
   rtlab doctor                    ${dim("prerequisites, bind addresses, free disk")}
+  rtlab creds                     ${dim("cloud credential status (never prints secrets)")}
   rtlab run                       ${dim("interactive wizard")}
 
 ${bold("Flags")}  --json  --yes  --no-color  --quiet
@@ -127,6 +132,26 @@ async function cmdDoctor() {
   });
 }
 
+// ── credentials ──────────────────────────────────────────────────────────────
+async function cmdCreds() {
+  step("Cloud credentials");
+  const rows = await credsStatus();
+  table(rows.map((r) => ({
+    provider: r.label, present: r.present ? "yes" : "no",
+    valid: r.valid ? "yes" : "no", detail: r.detail,
+  })), [
+    { key: "provider", label: "PROVIDER" },
+    { key: "present", label: "SET", color: (v) => (v === "yes" ? grn(v) : dim(v)) },
+    { key: "valid", label: "VALID", color: (v) => (v === "yes" ? grn(v) : red(v)) },
+    { key: "detail", label: "IDENTITY / REASON" },
+  ]);
+  plain("");
+  info(`Set them in the environment, or in ${CREDS_FILE_PATH}`);
+  info('e.g. { "aws": { "AWS_ACCESS_KEY_ID": "…", "AWS_SECRET_ACCESS_KEY": "…", "AWS_REGION": "us-east-1" } }');
+  info(dim("rtlab never stores or prints credential values — only the identity they resolve to."));
+  out(rows);
+}
+
 // ── catalog ──────────────────────────────────────────────────────────────────
 function cmdList() {
   const rows = filterEntries({ domain: flags.domain, engine: flags.engine })
@@ -160,13 +185,25 @@ function cmdInfo(id) {
   plain(`  ${e.description}`);
   plain("");
   info(`domain     ${e.domain}          engine   ${e.engine}`);
-  info(`resources  ${e.resources.cpus} vCPU · ${(e.resources.memoryMB / 1024).toFixed(1)}GB RAM · ${e.resources.diskGB}GB disk`);
-  info(`ATT&CK     ${e.attack.techniques.join(", ")}${e.sigmaPath ? `   sigma: ${e.sigmaPath}` : ""}`);
-  info(`isolation  egress ${e.isolation.requiresEgress ? "required" : "not needed (use --no-egress)"}`);
+  // Cloud labs run in the operator's account: vCPU/RAM and "egress" say nothing
+  // useful about them, while the provider and the spend/exposure reality do.
+  if (e.engine === "terraform") {
+    info(`provider   ${e.provider || "aws"}          cost     billable resources in your own account`);
+  } else if (e.imported) {
+    // Imported from the research catalogue, which does not state sizing.
+    info(`resources  not recorded — see the project's own docs`);
+  } else {
+    info(`resources  ${e.resources.cpus} vCPU · ${(e.resources.memoryMB / 1024).toFixed(1)}GB RAM · ${e.resources.diskGB}GB disk`);
+  }
+  info(`ATT&CK     ${e.attack.techniques.join(", ") || "—"}${e.sigmaPath ? `   sigma: ${e.sigmaPath}` : ""}`);
+  info(e.engine === "terraform"
+    ? "isolation  public endpoints by design — use a throwaway account and destroy when done"
+    : `isolation  egress ${e.isolation.requiresEgress ? "required" : "not needed (use --no-egress)"}`);
   if (e.repo) info(`repo       ${e.repo}`);
   if (e.docsUrl) info(`docs       ${e.docsUrl}`);
   plain("");
-  if (e.deploy.available) ok(`Deployable: rtlab deploy ${e.id}`);
+  if (e.deploy.available && e.engine === "terraform") ok(`Plan it for free: rtlab deploy ${e.id}   ${dim("— rtlab plans; you approve the apply")}`);
+  else if (e.deploy.available) ok(`Deployable: rtlab deploy ${e.id}`);
   else {
     warn("No automated deploy yet — guided setup:");
     (e.deploy.guidedSteps || []).forEach((s, i) => plain(`    ${dim(`${i + 1}.`)} ${s}`));
@@ -192,6 +229,15 @@ function cmdServicesList(app) {
   out(rows);
 }
 
+function cloudBanner(entry) {
+  if (isJson()) return;
+  plain("");
+  plain(`  ${ylw("⚠")}  ${bold(entry.name)} runs in ${bold("your real cloud account")}.`);
+  plain(`     ${dim("It creates billable resources and, by design, public endpoints.")}`);
+  plain(`     ${dim("rtlab will plan it for free and hand you the apply command — it never applies for you.")}`);
+  plain("");
+}
+
 // ── deploy ───────────────────────────────────────────────────────────────────
 async function cmdDeploy(id) {
   const entry = findEntry(id);
@@ -202,14 +248,19 @@ async function cmdDeploy(id) {
     die("nothing deployed");
   }
 
-  let bindIp;
-  try { bindIp = pickBindIp(flags.bind); } catch (e) { die(e.message); }
+  const isCloud = entry.engine === "terraform";
+
+  let bindIp = null;
+  if (!isCloud) {
+    try { bindIp = pickBindIp(flags.bind); } catch (e) { die(e.message); }
+  }
 
   const ttlMs = (() => { try { return parseTtl(flags.ttl ?? "4h"); } catch (e) { die(e.message); } })();
-  const noEgress = !!flags["no-egress"] && !entry.isolation.requiresEgress;
-  if (flags["no-egress"] && entry.isolation.requiresEgress) {
+  const noEgress = !isCloud && !!flags["no-egress"] && !entry.isolation.requiresEgress;
+  if (!isCloud && flags["no-egress"] && entry.isolation.requiresEgress) {
     warn(`${entry.name} needs outbound access — ignoring --no-egress`);
   }
+  if (isCloud && flags["no-egress"]) warn("cloud labs expose public endpoints by design — --no-egress does not apply");
 
   if (!DRY) {
     const free = await freeDiskGB(state.RT_HOME).catch(() => null);
@@ -222,14 +273,40 @@ async function cmdDeploy(id) {
   const depId = `${slug(entry.id)}-${Math.random().toString(36).slice(2, 8)}`;
   const engine = engineFor(entry);
 
-  if (!DRY) vulnerableBanner(entry.name);
-  step(`${DRY ? "Planning" : "Deploying"} ${bold(entry.name)} ${dim(`(${entry.engine} · bind ${bindIp})`)}`);
+  if (isCloud) cloudBanner(entry);
+  else if (!DRY) vulnerableBanner(entry.name);
+  step(`${isCloud ? "Planning" : DRY ? "Planning" : "Deploying"} ${bold(entry.name)} `
+    + dim(isCloud ? `(terraform · ${entry.provider || "aws"})` : `(${entry.engine} · bind ${bindIp})`));
 
   let res;
   try {
     res = await engine.deploy(entry, { id: depId, bindIp, noEgress, dryRun: DRY, onLog: logger });
   } catch (e) {
     die(`deploy failed: ${e.message}`);
+  }
+
+  if (res.planned) {
+    await state.ensureDirs();
+    const row = {
+      id: depId, labId: entry.id, name: entry.name, engine: entry.engine,
+      dir: res.dir, tfDir: res.tfDir, provider: res.provider,
+      services: res.services || [], status: "planned", createdAt: new Date().toISOString(),
+      ttl: flags.ttl ?? "manual", expiresAt: null,
+    };
+    await state.add(row);
+    plain("");
+    ok("Plan complete — no cloud resources were created, nothing has been billed.");
+    info(`account     ${res.identity}`);
+    if (res.plan) info(`plan        ${res.plan.add} to add · ${res.plan.change} to change · ${res.plan.destroy} to destroy`);
+    info(`id          ${depId}`);
+    plain("");
+    warn("Applying creates BILLABLE resources with PUBLIC endpoints. Review the plan above, then run:");
+    plain(`    ${cyn(res.applyCmd)}`);
+    info("when you are done, tear it down to stop the spend:");
+    plain(`    ${cyn(res.destroyCmd)}`);
+    plain("");
+    info(dim("rtlab deliberately does not apply for you — cloud spend stays a human decision."));
+    return out({ ok: true, planned: true, ...row, plan: res.plan, applyCmd: res.applyCmd, destroyCmd: res.destroyCmd });
   }
 
   if (DRY) {
@@ -271,7 +348,7 @@ async function cmdStatus(id) {
   if (!rows.length) { if (!isJson()) info("no labs deployed"); return out([]); }
   const live = [];
   for (const r of rows) {
-    const engine = r.engine === "vm" ? vagrantEngine : dockerEngine;
+    const engine = engineForDep(r);
     const st = await engine.status(r).catch(() => ({ status: "unknown" }));
     live.push({
       id: r.id, lab: r.labId, status: st.status,
@@ -290,7 +367,7 @@ async function cmdStatus(id) {
 async function cmdLifecycle(action, id) {
   const dep = await state.get(id);
   if (!dep) die(`no deployment "${id}" — see \`rtlab status\``);
-  const engine = dep.engine === "vm" ? vagrantEngine : dockerEngine;
+  const engine = engineForDep(dep);
   step(`${action} ${dep.name} ${dim(dep.id)}`);
   try { await engine[action](dep, { onLog: logger }); }
   catch (e) { die(`${action} failed: ${e.message}`); }
@@ -300,7 +377,7 @@ async function cmdLifecycle(action, id) {
 }
 
 async function destroyOne(dep) {
-  const engine = dep.engine === "vm" ? vagrantEngine : dockerEngine;
+  const engine = engineForDep(dep);
   step(`destroying ${dep.name} ${dim(dep.id)}`);
   await engine.destroy(dep, { onLog: logger }).catch((e) => warn(`teardown warning: ${e.message}`));
   await state.remove(dep.id);
@@ -333,7 +410,7 @@ async function cmdReap() {
 async function cmdLogs(id) {
   const dep = await state.get(id);
   if (!dep) die(`no deployment "${id}" — see \`rtlab status\``);
-  const engine = dep.engine === "vm" ? vagrantEngine : dockerEngine;
+  const engine = engineForDep(dep);
   const { cmd, args, cwd } = await engine.logs(dep, { follow: !!(flags.follow || flags.f) });
   const child = spawn(cmd, args, { cwd, stdio: "inherit" });
   child.on("close", (c) => process.exit(c ?? 0));
@@ -374,6 +451,7 @@ if (flags.help || flags.h || !cmd) { plain(HELP); process.exit(0); }
 try {
   switch (cmd) {
     case "doctor": await cmdDoctor(); break;
+    case "creds": await cmdCreds(); break;
     case "list": case "ls": cmdList(); break;
     case "search": cmdSearch(a1); break;
     case "info": case "show": cmdInfo(a1); break;

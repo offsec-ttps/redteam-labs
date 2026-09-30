@@ -1,11 +1,44 @@
 /** Catalog lookup/search over labs + service-CVE entries. */
 
-import { LABS, DOMAINS } from "./labs.mjs";
+import { LABS } from "./labs.mjs";
+import { IMPORTED_LABS } from "./imported.mjs";
 import { serviceEntries, SERVICES, SERVICE_APPS } from "./services.mjs";
 
-/** Every deployable/catalogued entry, labs first then service-CVE variants. */
+/**
+ * Every catalogued entry. Order of precedence matters:
+ *   1. LABS          — hand-curated, some with a working automated deploy
+ *   2. IMPORTED_LABS — the full research set from the .docx (catalogued, guided)
+ *   3. serviceEntries — vulhub-backed app@CVE variants
+ *
+ * A curated entry always wins over an imported one with the same id, so promoting
+ * a lab to automated deploy is just a matter of adding it to labs.mjs.
+ */
+/** github.com/owner/repo identifies one project; a bare domain does not. */
+function specificRepo(url) {
+  if (!url) return null;
+  const u = url.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/+$/, "");
+  return /^(github|gitlab)\.com\/[^/]+\/[^/]+/.test(u) ? u.split("/").slice(0, 3).join("/") : null;
+}
+/** "Purple Knight (Semperis)" and "Purple Knight" are the same lab. */
+const nameKey = (n) => String(n).toLowerCase().replace(/\([^)]*\)/g, "").replace(/[^a-z0-9]/g, "");
+
 export function allEntries() {
-  return [...LABS, ...serviceEntries()];
+  const ids = new Set(), repos = new Set(), names = new Set();
+  const take = (e) => { ids.add(e.id); const r = specificRepo(e.repo); if (r) repos.add(r); names.add(nameKey(e.name)); };
+  LABS.forEach(take);
+
+  // The research set lists some labs under several domains (TerraGoat appears in
+  // cloud, cicd and iac) and under vendor-prefixed names ("OWASP WebGoat" vs the
+  // curated "WebGoat"). Drop those twins on id, specific repo, or name — but NOT
+  // on a bare domain, since e.g. two different TryHackMe rooms share tryhackme.com.
+  const imported = [];
+  for (const e of IMPORTED_LABS) {
+    const r = specificRepo(e.repo);
+    if (ids.has(e.id) || (r && repos.has(r)) || names.has(nameKey(e.name))) continue;
+    take(e);
+    imported.push(e);
+  }
+  return [...LABS, ...imported, ...serviceEntries()];
 }
 
 export function findEntry(id) {
@@ -40,4 +73,7 @@ export function searchEntries(q) {
     .sort((a, b) => b.s - a.s).map((x) => x.e);
 }
 
-export { LABS, DOMAINS, SERVICES, SERVICE_APPS };
+/** Domains present across the whole catalog (curated + imported + services). */
+export const DOMAINS = [...new Set(allEntries().map((e) => e.domain))].sort();
+
+export { LABS, IMPORTED_LABS, SERVICES, SERVICE_APPS };

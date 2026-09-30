@@ -18,28 +18,53 @@ const START = "<!-- CATALOG:START -->";
 const END = "<!-- CATALOG:END -->";
 
 const TITLE = {
-  web: "Web &amp; API", cicd: "CI/CD &amp; Supply Chain", k8s: "Kubernetes &amp; Containers",
-  linux: "Linux / Endpoint", ad: "Active Directory / Windows", "service-cve": "Service-Level CVE Labs",
+  cloud: "Cloud Security", k8s: "Kubernetes &amp; Containers", web: "Web &amp; API",
+  llm: "LLM / GenAI / MCP", ad: "Active Directory / Windows", linux: "Linux / Endpoint",
+  cicd: "CI/CD &amp; Supply Chain", iac: "IaC / Terraform / Policy as Code",
+  mobile: "Mobile Application", network: "Network / PCAP", identity: "Identity / IAM",
+  ot: "IoT / OT / ICS", "service-cve": "Service-Level CVE Labs",
 };
 const BLURB = {
-  web: "OWASP-style application and API targets — the fastest path from exploit to detection.",
-  cicd: "Pipeline and supply-chain attack paths (Jenkins, GitLab, Gitea).",
+  cloud: "Deliberately vulnerable cloud estates. These run in **your own account**, cost real money and expose public endpoints — `rtlab` plans them for free and hands you the apply command.",
   k8s: "Cluster misconfiguration, container escape and RBAC abuse. Pair with Falco/Tetragon for runtime telemetry.",
-  linux: "Host-level exploitation and privilege escalation with rich endpoint telemetry.",
+  web: "OWASP-style application and API targets — the fastest path from exploit to detection.",
+  llm: "Prompt injection, insecure output handling, MCP and agent abuse (OWASP LLM Top 10).",
   ad: "Vulnerable AD forests — the richest source of Windows attack telemetry.",
+  linux: "Host-level exploitation and privilege escalation with rich endpoint telemetry.",
+  cicd: "Pipeline and supply-chain attack paths (Jenkins, GitLab, Gitea, GitHub Actions).",
+  iac: "Misconfigured infrastructure-as-code — the reference targets for IaC scanning and drift detection.",
+  mobile: "Vulnerable Android/iOS applications for mobile app security testing.",
+  network: "Traffic, PCAP and network-detection labs (Zeek, Suricata, Arkime).",
+  identity: "Identity provider, SSO, OAuth and IAM attack paths.",
+  ot: "Industrial control, PLC and IoT protocol labs.",
   "service-cve": "One application, one version, one CVE — isolated and disposable. Backed by a pinned [vulhub](https://github.com/vulhub/vulhub) revision.",
 };
-const ORDER = ["web", "cicd", "k8s", "linux", "ad", "service-cve"];
+/** Preferred order; any domain not listed is appended alphabetically. */
+const PREFERRED = ["cloud", "k8s", "web", "llm", "ad", "linux", "cicd", "iac", "mobile", "network", "identity", "ot", "service-cve"];
+const titleFor = (d) => TITLE[d] || d.replace(/(^|-)([a-z])/g, (_, a, b) => a + b.toUpperCase());
 
 const gb = (mb) => { const v = mb / 1024; return Number.isInteger(v) ? `${v}` : v.toFixed(1); };
-const res = (e) => `${e.resources.cpus} vCPU · ${gb(e.resources.memoryMB)} GB`;
-const ports = (e) => (e.services || []).map((s) => s.port).join(", ") || "—";
-const tech = (e, n) => e.attack.techniques.slice(0, n).map((t) => `\`${t}\``).join(", ");
+/**
+ * Imported entries carry placeholder resources (the research doc does not state
+ * them), and cloud labs have no local footprint at all. Print "—" rather than
+ * invented numbers.
+ */
+const res = (e) => {
+  if (e.engine === "terraform") return "_cloud_";
+  if (e.imported) return "—";
+  return `${e.resources.cpus} vCPU · ${gb(e.resources.memoryMB)} GB`;
+};
+const ports = (e) => (e.services || []).map((s) => s.port).filter((p) => p).join(", ") || "—";
+const tech = (e, n) => e.attack.techniques.slice(0, n).map((t) => `\`${t}\``).join(", ") || "—";
 
 function build() {
   const all = allEntries();
   const by = new Map();
   for (const e of all) { if (!by.has(e.domain)) by.set(e.domain, []); by.get(e.domain).push(e); }
+  // Derived, not hardcoded: a domain added to the catalog can never silently
+  // vanish from the README (which is exactly what a fixed list caused once).
+  const present = [...by.keys()];
+  const ORDER = [...PREFERRED.filter((d) => by.has(d)), ...present.filter((d) => !PREFERRED.includes(d)).sort()];
   const L = [];
 
   L.push("### At a glance", "");
@@ -49,7 +74,7 @@ function build() {
     const rows = by.get(d); if (!rows) continue;
     const auto = rows.filter((e) => e.deploy.available).length;
     const eng = [...new Set(rows.map((e) => e.engine))].sort().join(", ");
-    L.push(`| ${TITLE[d]} | \`${d}\` | ${rows.length} | ${auto} | ${rows.length - auto} | ${eng} |`);
+    L.push(`| ${titleFor(d)} | \`${d}\` | ${rows.length} | ${auto} | ${rows.length - auto} | ${eng} |`);
   }
   const auto = all.filter((e) => e.deploy.available).length;
   L.push(`| **Total** | | **${all.length}** | **${auto}** | **${all.length - auto}** | |`, "");
@@ -57,7 +82,7 @@ function build() {
 
   for (const d of ORDER.filter((x) => x !== "service-cve")) {
     const rows = by.get(d); if (!rows) continue;
-    L.push(`### ${TITLE[d]} &nbsp;<sub>\`rtlab list --domain ${d}\`</sub>`, "", BLURB[d], "");
+    L.push(`### ${titleFor(d)} &nbsp;<sub>\`rtlab list --domain ${d}\`</sub>`, "", (BLURB[d] || ""), "");
     L.push("| Lab | `id` | Deploy | Engine | Port | Resources | ATT&CK |");
     L.push("| --- | --- | :---: | :---: | --- | --- | --- |");
     for (const e of rows.sort((a, b) => (a.deploy.available === b.deploy.available ? a.name.localeCompare(b.name) : a.deploy.available ? -1 : 1))) {
@@ -67,7 +92,7 @@ function build() {
   }
 
   const svcs = by.get("service-cve") || [];
-  L.push(`### ${TITLE["service-cve"]} &nbsp;<sub>\`rtlab list --domain service-cve\`</sub>`, "", BLURB["service-cve"], "");
+  L.push(`### ${titleFor("service-cve")} &nbsp;<sub>\`rtlab list --domain service-cve\`</sub>`, "", BLURB["service-cve"], "");
   L.push("```bash", "rtlab services list                          # every app + CVE",
     "rtlab services list tomcat                   # one app",
     "rtlab services deploy httpd@CVE-2021-41773   # deploy one", "```", "");
