@@ -87,25 +87,103 @@ rtlab run
 
 Add `--json` to any read command for scripting.
 
-## What's in the catalog
+## Lab catalog
 
-28 entries today, across web/API, CI/CD, Kubernetes, Linux, Active Directory, and
-service-level CVEs.
+**28 labs across 6 categories.** Every entry carries its **MITRE ATT&CK techniques** and a **Sigma namespace**, so you know what you are meant to detect before you start.
 
-- **Web / API** — Juice Shop, DVWA, WebGoat, VAmPI, crAPI
-- **CI/CD** — CI/CD Goat
-- **Kubernetes** — Kubernetes Goat *(guided)*
-- **Linux / AD** — Metasploitable 3, GOAD *(guided)*
-- **Service CVEs** — Apache httpd, Tomcat, Nginx, Struts2, Spring, Log4j, Redis,
-  Jenkins, WebLogic, Confluence — by version/CVE, backed by a pinned
-  [vulhub](https://github.com/vulhub/vulhub) revision
+<!-- CATALOG:START -->
 
-Each entry carries its **MITRE ATT&CK techniques** and a **Sigma namespace**, so you
-know what you're meant to detect before you start.
+### At a glance
 
-`auto` = one-command deploy. `guided` = catalogued with prerequisites and steps, but
-no automated path yet (e.g. GOAD ships its own multi-VM installer). Run
-`rtlab info <id>` to see which, and why.
+| Category | `--domain` | Labs | Auto-deploy | Guided | Engine |
+| --- | --- | :---: | :---: | :---: | --- |
+| Web &amp; API | `web` | 6 | 5 | 1 | docker |
+| CI/CD &amp; Supply Chain | `cicd` | 1 | 1 | 0 | docker |
+| Kubernetes &amp; Containers | `k8s` | 1 | 0 | 1 | k8s |
+| Linux / Endpoint | `linux` | 1 | 1 | 0 | vm |
+| Active Directory / Windows | `ad` | 1 | 0 | 1 | vm |
+| Service-Level CVE Labs | `service-cve` | 18 | 18 | 0 | docker |
+| **Total** | | **28** | **25** | **3** | |
+
+`auto` = one-command deploy · `guided` = catalogued with prerequisites and steps, but no automated path yet (run `rtlab info <id>` for the reason).
+
+### Web &amp; API &nbsp;<sub>`rtlab list --domain web`</sub>
+
+OWASP-style application and API targets — the fastest path from exploit to detection.
+
+| Lab | `id` | Deploy | Engine | Port | Resources | ATT&CK |
+| --- | --- | :---: | :---: | --- | --- | --- |
+| **DVWA (Damn Vulnerable Web Application)** | `dvwa` | `auto` | docker | 80 | 1 vCPU · 1 GB | `T1190`, `T1059`, `T1078` |
+| **OWASP crAPI** | `crapi` | `auto` | docker | 8888 | 2 vCPU · 4 GB | `T1190`, `T1059` |
+| **OWASP Juice Shop** | `juice-shop` | `auto` | docker | 3000 | 1 vCPU · 1 GB | `T1190`, `T1071`, `T1505` |
+| **OWASP WebGoat** | `webgoat` | `auto` | docker | 8080 | 2 vCPU · 2 GB | `T1190`, `T1059` |
+| **VAmPI (Vulnerable API)** | `vampi` | `auto` | docker | 5000 | 1 vCPU · 0.5 GB | `T1190` |
+| **DVGA (Damn Vulnerable GraphQL App)** | `dvga` | `guided` | docker | 5013 | 1 vCPU · 0.5 GB | `T1592`, `T1190` |
+
+### CI/CD &amp; Supply Chain &nbsp;<sub>`rtlab list --domain cicd`</sub>
+
+Pipeline and supply-chain attack paths (Jenkins, GitLab, Gitea).
+
+| Lab | `id` | Deploy | Engine | Port | Resources | ATT&CK |
+| --- | --- | :---: | :---: | --- | --- | --- |
+| **CI/CD Goat** | `cicd-goat` | `auto` | docker | 8080 | 4 vCPU · 8 GB | `T1195`, `T1059.004` |
+
+### Kubernetes &amp; Containers &nbsp;<sub>`rtlab list --domain k8s`</sub>
+
+Cluster misconfiguration, container escape and RBAC abuse. Pair with Falco/Tetragon for runtime telemetry.
+
+| Lab | `id` | Deploy | Engine | Port | Resources | ATT&CK |
+| --- | --- | :---: | :---: | --- | --- | --- |
+| **Kubernetes Goat** | `kubernetes-goat` | `guided` | k8s | 1234 | 4 vCPU · 8 GB | `T1611`, `T1613`, `T1525`, `T1610`, `T1609` |
+
+### Linux / Endpoint &nbsp;<sub>`rtlab list --domain linux`</sub>
+
+Host-level exploitation and privilege escalation with rich endpoint telemetry.
+
+| Lab | `id` | Deploy | Engine | Port | Resources | ATT&CK |
+| --- | --- | :---: | :---: | --- | --- | --- |
+| **Metasploitable 3 (Ubuntu 14.04)** | `metasploitable3-ub1404` | `auto` | vm | 22 | 2 vCPU · 2 GB | `T1190`, `T1068` |
+
+### Active Directory / Windows &nbsp;<sub>`rtlab list --domain ad`</sub>
+
+Vulnerable AD forests — the richest source of Windows attack telemetry.
+
+| Lab | `id` | Deploy | Engine | Port | Resources | ATT&CK |
+| --- | --- | :---: | :---: | --- | --- | --- |
+| **GOAD (Game of Active Directory)** | `goad` | `guided` | vm | 3389 | 8 vCPU · 24 GB | `T1003`, `T1068`, `T1071`, `T1486`, `T1055` |
+
+### Service-Level CVE Labs &nbsp;<sub>`rtlab list --domain service-cve`</sub>
+
+One application, one version, one CVE — isolated and disposable. Backed by a pinned [vulhub](https://github.com/vulhub/vulhub) revision.
+
+```bash
+rtlab services list                          # every app + CVE
+rtlab services list tomcat                   # one app
+rtlab services deploy httpd@CVE-2021-41773   # deploy one
+```
+
+| Application | `id` | Affected version | Severity | Vulnerability | ATT&CK |
+| --- | --- | --- | :---: | --- | --- |
+| Atlassian Confluence | `confluence@CVE-2022-26134` | <7.18.1 | **critical** | OGNL injection → unauthenticated RCE | `T1190`, `T1059` |
+| Apache HTTP Server | `httpd@CVE-2017-15715` | 2.4.0–2.4.29 | high | Newline in filename bypasses upload filters | `T1190`, `T1505.003` |
+| Apache HTTP Server | `httpd@CVE-2021-41773` | 2.4.49 | **critical** | Path traversal / RCE via mod_cgi | `T1190` |
+| Apache HTTP Server | `httpd@CVE-2021-42013` | 2.4.50 | **critical** | Path traversal (2.4.50 bypass of the 41773 fix) | `T1190` |
+| Jenkins | `jenkins@CVE-2018-1000861` | ≤2.153 | **critical** | Unauthenticated RCE via stapler routing | `T1190`, `T1059` |
+| Apache Log4j | `log4j@CVE-2021-44228` | 2.0–2.14.1 | **critical** | Log4Shell — JNDI lookup RCE | `T1190`, `T1059` |
+| Nginx | `nginx@CVE-2013-4547` | 0.8.41–1.5.6 | medium | Space-in-URI parsing flaw bypasses restrictions | `T1190` |
+| Nginx | `nginx@insecure-config` | any (misconfig) | medium | Off-by-slash alias traversal | `T1190` |
+| Redis | `redis@CVE-2022-0543` | Debian/Ubuntu builds | **critical** | Lua sandbox escape → RCE | `T1190`, `T1059` |
+| Redis | `redis@unauth` | any (misconfig) | high | Unauthenticated access | `T1078` |
+| Spring Framework | `spring@CVE-2022-22947` | 3.1.0 | **critical** | Spring Cloud Gateway SpEL RCE | `T1190`, `T1059` |
+| Spring Framework | `spring@CVE-2022-22965` | ≤5.3.17 | **critical** | Spring4Shell — data-binding RCE | `T1190`, `T1059` |
+| Apache Struts 2 | `struts2@S2-046` | 2.3.x | **critical** | OGNL RCE via multipart Content-Disposition | `T1190`, `T1059` |
+| Apache Struts 2 | `struts2@S2-053` | 2.0.0–2.3.33 | **critical** | OGNL RCE via Freemarker tag | `T1190`, `T1059` |
+| Apache Tomcat | `tomcat@CVE-2017-12615` | 7.0.x | high | RCE via HTTP PUT (readonly=false) | `T1190`, `T1505.003` |
+| Apache Tomcat | `tomcat@CVE-2020-1938` | 6/7/8/9 | **critical** | Ghostcat — AJP file read / inclusion | `T1190` |
+| Apache Tomcat | `tomcat@weak-password` | 8.x | high | Manager deployed with weak credentials → WAR upload | `T1078`, `T1505.003` |
+| Oracle WebLogic | `weblogic@CVE-2017-10271` | 10.3.6 / 12.x | **critical** | XMLDecoder deserialization RCE | `T1190`, `T1059` |
+
+<!-- CATALOG:END -->
 
 ## Honest status
 

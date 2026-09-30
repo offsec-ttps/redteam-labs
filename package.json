@@ -1,15 +1,32 @@
 {
   "name": "rtlab",
   "version": "0.1.0",
-  "description": "Red-team lab launcher — deploy intentionally vulnerable labs locally (Docker or Vagrant) on an isolated, host-only network with a TTL.",
+  "description": "Red-team lab launcher \u2014 deploy intentionally vulnerable labs locally (Docker or Vagrant) on an isolated, host-only network with a TTL.",
   "type": "module",
-  "bin": { "rtlab": "bin/rtlab.mjs" },
-  "engines": { "node": ">=20" },
-  "files": ["bin", "src", "README.md", "LICENSE"],
-  "keywords": ["security", "detection-engineering", "red-team", "vulnerable-lab", "purple-team", "cli"],
+  "bin": {
+    "rtlab": "bin/rtlab.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "security",
+    "detection-engineering",
+    "red-team",
+    "vulnerable-lab",
+    "purple-team",
+    "cli"
+  ],
   "license": "MIT",
   "scripts": {
     "rtlab": "node bin/rtlab.mjs",
-    "check": "for f in bin/rtlab.mjs src/*.mjs src/catalog/*.mjs src/engines/*.mjs; do node --check $f || exit 1; done"
+    "check": "for f in bin/rtlab.mjs src/*.mjs src/catalog/*.mjs src/engines/*.mjs; do node --check $f || exit 1; done",
+    "readme": "node scripts/gen-catalog-tables.mjs"
   }
 }
