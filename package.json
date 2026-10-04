@@ -27,6 +27,7 @@
   "scripts": {
     "rtlab": "node bin/rtlab.mjs",
     "check": "for f in bin/rtlab.mjs src/*.mjs src/catalog/*.mjs src/engines/*.mjs; do node --check $f || exit 1; done",
-    "readme": "node scripts/gen-catalog-tables.mjs"
+    "readme": "node scripts/gen-catalog-tables.mjs",
+    "test": "node --test test/*.test.mjs"
   }
 }

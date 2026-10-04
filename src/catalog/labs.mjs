@@ -11,6 +11,8 @@
  *   { kind: "compose", repo, subdir? }      → shallow-clone upstream, use their compose;
  *                                             ports re-bound via a generated override
  *   { kind: "vulhub",  path }               → pinned vulhub revision, <app>/<CVE>/
+ *   { kind: "build",   repo, port, subdir?, dockerfile? }
+ *                                           → upstream ships only a Dockerfile: clone and build it
  *   { kind: "vagrant", box }                → VM engine
  *
  * `deploy.available: false` = catalogued but no automated path yet (template +
@@ -41,7 +43,7 @@ export const LABS = [
     sigmaPath: "web/",
     isolation: { requiresEgress: false, requiresPublicIp: false },
     deploy: { available: true },
-    verified: false,
+    verified: true,
   },
   {
     id: "dvwa",
@@ -59,7 +61,7 @@ export const LABS = [
     sigmaPath: "web/",
     isolation: { requiresEgress: false, requiresPublicIp: false },
     deploy: { available: true },
-    verified: false,
+    verified: true,
   },
   {
     id: "webgoat",
@@ -77,7 +79,7 @@ export const LABS = [
     sigmaPath: "web/",
     isolation: { requiresEgress: false, requiresPublicIp: false },
     deploy: { available: true },
-    verified: false,
+    verified: true,
   },
   {
     id: "vampi",
@@ -95,7 +97,7 @@ export const LABS = [
     sigmaPath: "web/api/",
     isolation: { requiresEgress: false, requiresPublicIp: false },
     deploy: { available: true },
-    verified: false,
+    verified: true,
   },
   {
     id: "dvga",
@@ -106,7 +108,7 @@ export const LABS = [
     docsUrl: "https://github.com/dolevf/Damn-Vulnerable-GraphQL-Application",
     engine: "docker",
     environments: ["local", "remote"],
-    source: { kind: "image", image: "dolevf/dvga", port: 5013 },
+    source: { kind: "image", image: "dolevf/dvga", port: 5013, env: { WEB_HOST: "0.0.0.0" } },
     resources: { cpus: 1, memoryMB: 512, diskGB: 1 },
     services: [{ name: "api", port: 5013, protocol: "http" }],
     attack: { tactics: web.tactics, techniques: ["T1592", "T1190"] },
@@ -116,16 +118,8 @@ export const LABS = [
     // the container, so it is unreachable from the host however the network is set
     // up. Needs the image's bind-address env var — add it to source.env and flip
     // this back to available once confirmed.
-    deploy: {
-      available: false,
-      guidedSteps: [
-        "The published image binds 127.0.0.1 inside the container, so rtlab cannot expose it yet.",
-        "Run it directly and set the bind address per the project's README:",
-        "  docker run --rm -p 5013:5013 dolevf/dvga   # then check it is reachable",
-        "If an env var (e.g. WEB_HOST=0.0.0.0) fixes the bind, add it to this entry's source.env.",
-      ],
-    },
-    verified: false,
+    deploy: { available: true },
+    verified: true,
   },
 
   // ── Multi-container upstream compose (ports re-bound via generated override) ──
@@ -145,7 +139,7 @@ export const LABS = [
     sigmaPath: "web/api/",
     isolation: { requiresEgress: true, requiresPublicIp: false },
     deploy: { available: true },
-    verified: false,
+    verified: true,
   },
   {
     id: "cicd-goat",
@@ -163,7 +157,7 @@ export const LABS = [
     sigmaPath: "devops/",
     isolation: { requiresEgress: true, requiresPublicIp: false },
     deploy: { available: true },
-    verified: false,
+    verified: true,
   },
 
   // ── Kubernetes (needs a cluster: catalogued, guided for now) ──
@@ -208,7 +202,7 @@ export const LABS = [
     engine: "terraform",
     environments: ["cloud"],
     provider: "aws",
-    source: { kind: "terraform", repo: "https://github.com/ine-labs/AWSGoat", provider: "aws" },
+    source: { kind: "terraform", repo: "https://github.com/ine-labs/AWSGoat", provider: "aws", tfDir: "modules/module-1" },   // the root has no module; module-1 is the deployable app
     resources: { cpus: 0, memoryMB: 0, diskGB: 1 },
     services: [],
     attack: { tactics: ["TA0006 Credential Access", "TA0001 Initial Access"], techniques: ["T1190", "T1078", "T1552"] },
@@ -234,27 +228,7 @@ export const LABS = [
     attack: { tactics: ["TA0005 Defense Evasion"], techniques: ["T1578"] },
     sigmaPath: "cloud/terraform/",
     isolation: { requiresEgress: true, requiresPublicIp: true },
-    deploy: { available: true },
-    verified: false,
-  },
-  {
-    id: "sadcloud",
-    name: "Sadcloud",
-    domain: "cloud",
-    description:
-      "Terraform that stands up an intentionally insecure AWS account — a broad spread of misconfigurations to baseline cloud posture detections against.",
-    repo: "https://github.com/naggie/sadcloud",
-    docsUrl: "https://github.com/naggie/sadcloud",
-    engine: "terraform",
-    environments: ["cloud"],
-    provider: "aws",
-    source: { kind: "terraform", repo: "https://github.com/naggie/sadcloud", provider: "aws" },
-    resources: { cpus: 0, memoryMB: 0, diskGB: 1 },
-    services: [],
-    attack: { tactics: ["TA0005 Defense Evasion"], techniques: ["T1578", "T1526"] },
-    sigmaPath: "cloud/aws/",
-    isolation: { requiresEgress: true, requiresPublicIp: true },
-    deploy: { available: true },
+    deploy: { available: false, reason: "Scanner target, not a deployable lab: its Terraform demands an S3 state backend (bucket, key, region passed to `terraform init`) and uses pre-1.0 syntax, so `terraform init` fails as shipped. Point Checkov, tfsec, KICS or Terrascan at the repository instead.", guidedSteps: ["git clone https://github.com/bridgecrewio/terragoat", "checkov -d terragoat/terraform   # or tfsec / kics / terrascan", "Compare the findings with TerraGoat's documented misconfigurations"] },
     verified: false,
   },
   {
@@ -278,6 +252,45 @@ export const LABS = [
     verified: false,
   },
 
+  // ── Promoted after the 2026-10-01 repo audit: upstream ships a compose file, an image or a Dockerfile ──
+  {"id": "dvna", "name": "DVNA (Damn Vulnerable NodeJS Application)", "domain": "web", "description": "Node.js app demonstrating the OWASP Top 10 with intentionally insecure code (official single-container build with SQLite).", "repo": "https://github.com/appsecco/dvna", "docsUrl": "https://github.com/appsecco/dvna", "engine": "docker", "environments": ["local", "remote"], "source": {"kind": "image", "image": "appsecco/dvna:sqlite", "port": 9090}, "resources": {"cpus": 1, "memoryMB": 1024, "diskGB": 3}, "services": [{"name": "web", "port": 9090, "protocol": "http"}], "attack": {"tactics": ["TA0001 Initial Access", "TA0002 Execution"], "techniques": ["T1190", "T1059"]}, "sigmaPath": "web/", "isolation": {"requiresEgress": false, "requiresPublicIp": false}, "deploy": {"available": true}, "verified": true},
+  {"id": "dvws-node", "name": "DVWS (Damn Vulnerable Web Services)", "domain": "web", "description": "Insecure web services and APIs (REST, GraphQL, XML, JWT) built to practise API attacks.", "repo": "https://github.com/snoopysecurity/dvws-node", "docsUrl": "https://github.com/snoopysecurity/dvws-node", "engine": "docker", "environments": ["local", "remote"], "source": {"kind": "compose", "repo": "https://github.com/snoopysecurity/dvws-node"}, "resources": {"cpus": 1, "memoryMB": 1024, "diskGB": 3}, "services": [{"name": "web", "port": 80, "protocol": "http"}], "attack": {"tactics": ["TA0001 Initial Access", "TA0002 Execution"], "techniques": ["T1190", "T1552"]}, "sigmaPath": "web/", "isolation": {"requiresEgress": false, "requiresPublicIp": false}, "deploy": {"available": true}, "verified": true},
+  {"id": "owasp-nodegoat", "name": "OWASP NodeGoat", "domain": "web", "description": "OWASP's Node.js/MongoDB app with the Top 10 built in, plus tutorials for each flaw.", "repo": "https://github.com/OWASP/NodeGoat", "docsUrl": "https://github.com/OWASP/NodeGoat", "engine": "docker", "environments": ["local", "remote"], "source": {"kind": "compose", "repo": "https://github.com/OWASP/NodeGoat"}, "resources": {"cpus": 1, "memoryMB": 1024, "diskGB": 3}, "services": [{"name": "web", "port": 4000, "protocol": "http"}], "attack": {"tactics": ["TA0001 Initial Access", "TA0002 Execution"], "techniques": ["T1190", "T1059"]}, "sigmaPath": "web/", "isolation": {"requiresEgress": false, "requiresPublicIp": false}, "deploy": {"available": true}, "verified": true},
+  {"id": "owasp-railsgoat", "name": "OWASP RailsGoat", "domain": "web", "description": "Ruby on Rails app with the OWASP Top 10 and a deliberately weak authorization model.", "repo": "https://github.com/OWASP/railsgoat", "docsUrl": "https://github.com/OWASP/railsgoat", "engine": "docker", "environments": ["local", "remote"], "source": {"kind": "compose", "repo": "https://github.com/OWASP/railsgoat", "file": "rtlab-railsgoat.yml", "files": {"rtlab-railsgoat.yml": "# rtlab: upstream's compose expects a manual `rails db:setup`; prepare the SQLite database on start.\nservices:\n  web:\n    build: .\n    command: bash -c \"rm -f tmp/pids/server.pid && bundle exec rails db:prepare && bundle exec rails s -p 3000 -b '0.0.0.0'\"\n    ports:\n      - \"3000:3000\"\n"}}, "resources": {"cpus": 1, "memoryMB": 1536, "diskGB": 4}, "services": [{"name": "web", "port": 3000, "protocol": "http"}], "attack": {"tactics": ["TA0001 Initial Access", "TA0002 Execution"], "techniques": ["T1190", "T1078"]}, "sigmaPath": "web/", "isolation": {"requiresEgress": false, "requiresPublicIp": false}, "deploy": {"available": true}, "verified": true},
+  {"id": "owasp-security-shepherd", "name": "OWASP Security Shepherd", "domain": "web", "description": "Web and mobile security training platform with levelled challenges and scoring.", "repo": "https://github.com/OWASP/SecurityShepherd", "docsUrl": "https://github.com/OWASP/SecurityShepherd", "engine": "docker", "environments": ["local", "remote"], "resources": {"cpus": 2, "memoryMB": 2048, "diskGB": 5}, "services": [{"name": "web", "port": 80, "protocol": "http"}], "attack": {"tactics": ["TA0001 Initial Access", "TA0002 Execution"], "techniques": ["T1190"]}, "sigmaPath": "web/", "isolation": {"requiresEgress": false, "requiresPublicIp": false}, "deploy": {"available": false, "reason": "Its compose file copies a WAR and TLS keystore that only `mvn -Pdocker clean install` produces; run that Maven build first, then `docker compose up` (admin / password)."}, "verified": false, "prerequisites": ["Java 17 and Maven", "Docker with Compose"], "steps": ["git clone https://github.com/OWASP/SecurityShepherd && cd SecurityShepherd", "mvn -Pdocker clean install -DskipTests", "docker compose up -d", "Open http://localhost (admin / password, change it at first login)"]},
+  {"id": "damn-vulnerable-llm-agent", "name": "Damn Vulnerable LLM Agent", "domain": "llm", "description": "A ReAct-style LLM agent with prompt-injection and tool-abuse weaknesses. Choose the model at deploy time: a bundled local Ollama (llama3, about 4.7 GB on first start, slow on CPU), OpenRouter free models with your API key, or OpenAI.", "repo": "https://github.com/WithSecureLabs/damn-vulnerable-llm-agent", "docsUrl": "https://github.com/WithSecureLabs/damn-vulnerable-llm-agent", "engine": "docker", "environments": ["local", "remote"], "source": {"kind": "compose", "repo": "https://github.com/WithSecureLabs/damn-vulnerable-llm-agent", "file": "rtlab-dvla.yml", "files": {"rtlab-dvla.yml": "# rtlab: the agent needs a model behind it. Options (rtlab --lab-env, or the platform's deploy form) choose the\n# ($$ keeps the variables for the container's shell: Compose must not expand them on the host.)\n# backend: a bundled local Ollama (default, no key needed, slow on CPU), OpenRouter (free models with a key), or\n# OpenAI. The Ollama containers only pull a model when the Ollama backend is selected.\nservices:\n  ollama:\n    image: ollama/ollama:latest\n    volumes:\n      - ollama:/root/.ollama\n  ollama-pull:\n    image: ollama/ollama:latest\n    depends_on:\n      - ollama\n    environment:\n      OLLAMA_HOST: http://ollama:11434\n    entrypoint: [\"/bin/sh\", \"-c\", \"[ \\\"$${LLM_BACKEND:-ollama}\\\" = ollama ] || exit 0; until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull \\\"$${LLM_MODEL:-llama3}\\\"\"]\n    restart: \"no\"\n  agent:\n    build:\n      context: .\n      dockerfile: rtlab.Dockerfile\n    depends_on:\n      - ollama\n    environment:\n      OLLAMA_HOST: http://ollama:11434\n      OLLAMA_API_BASE: http://ollama:11434\n    ports:\n      - \"8501:8501\"\nvolumes:\n  ollama: {}\n", "rtlab.Dockerfile": "# rtlab: upstream's Dockerfile installs the apt package \"pip\", which does not exist on Debian, so the build fails.\nFROM python:3.9-slim\nWORKDIR /app\nRUN apt-get update && apt-get install -y --no-install-recommends build-essential curl git && rm -rf /var/lib/apt/lists/*\nRUN pip install python-dotenv\nCOPY . /app/\nRUN pip3 install -r requirements.txt\nCOPY config.toml /root/.streamlit/config.toml\nRUN chmod +x /app/rtlab-entrypoint.sh\nEXPOSE 8501\nENTRYPOINT [\"/app/rtlab-entrypoint.sh\"]\n", "rtlab-entrypoint.sh": "#!/bin/sh\n# rtlab: pick the model backend from deploy-time options and write the app's llm-config.yaml accordingly.\n# The app reads `model_name` and maps it through llm-config.yaml to a litellm model string.\nset -e\nBACKEND=\"${LLM_BACKEND:-ollama}\"\ncase \"$BACKEND\" in\n  ollama)     MODEL=\"ollama/${LLM_MODEL:-llama3}\";;\n  openrouter) MODEL=\"openrouter/${LLM_MODEL:-qwen/qwen3.8-27b:free}\";;\n  openai)     MODEL=\"${LLM_MODEL:-gpt-4o-mini}\";;\n  *) echo \"unknown LLM_BACKEND $BACKEND\" >&2; exit 1;;\nesac\nprintf 'default_model: \"%s\"\\nmodels:\\n  - model_name: rtlab\\n    model: \"%s\"\\n' \"$MODEL\" \"$MODEL\" > /app/llm-config.yaml\nexport model_name=rtlab\necho \"rtlab: LLM backend $BACKEND, model $MODEL\"\nexec streamlit run main.py --server.port=8501 --server.address=0.0.0.0\n"}}, "resources": {"cpus": 4, "memoryMB": 8192, "diskGB": 15}, "services": [{"name": "web", "port": 8501, "protocol": "http"}], "attack": {"tactics": ["TA0001 Initial Access", "TA0002 Execution"], "techniques": ["T1190"]}, "sigmaPath": "", "isolation": {"requiresEgress": true, "requiresPublicIp": false}, "deploy": {"available": true}, "verified": true, "options": [{"key": "LLM_BACKEND", "label": "Model backend", "type": "choice", "choices": ["ollama", "openrouter", "openai"], "default": "ollama", "help": "ollama runs a model inside the lab VM (no key, needs about 8 GB); openrouter uses OpenRouter's API (free models exist); openai uses OpenAI's API."}, {"key": "LLM_MODEL", "label": "Model id (blank = backend default)", "type": "string", "default": "", "help": "Ollama: llama3. OpenRouter: qwen/qwen3.8-27b:free or any id ending in :free. OpenAI: gpt-4o-mini."}, {"key": "OPENROUTER_API_KEY", "label": "OpenRouter API key", "type": "secret", "help": "Needed when the backend is openrouter; create a free key at openrouter.ai."}, {"key": "OPENAI_API_KEY", "label": "OpenAI API key", "type": "secret", "help": "Needed when the backend is openai."}]},
+  {"id": "iotgoat-owasp", "name": "OWASP IoTGoat", "domain": "ot", "description": "Deliberately insecure IoT firmware (OpenWrt based) with the OWASP IoT Top 10 weaknesses, booted under QEMU inside a container. Downloads the firmware image on first start and takes a few minutes to boot.", "repo": "https://github.com/OWASP/IoTGoat", "docsUrl": "https://github.com/OWASP/IoTGoat", "engine": "docker", "environments": ["local", "remote"], "source": {"kind": "compose", "repo": "https://github.com/OWASP/IoTGoat", "subdir": "docker"}, "resources": {"cpus": 2, "memoryMB": 3072, "diskGB": 4}, "services": [{"name": "web", "port": 8080, "protocol": "http"}, {"name": "web-tls", "port": 4443, "protocol": "https"}, {"name": "ssh", "port": 2222, "protocol": "ssh"}], "attack": {"tactics": ["TA0001 Initial Access", "TA0002 Execution"], "techniques": ["T1190", "T1078"]}, "sigmaPath": "", "isolation": {"requiresEgress": false, "requiresPublicIp": false}, "deploy": {"available": true}, "verified": true, "requiresEgress": true},
+  {"id": "conpot-honeypot", "name": "Conpot ICS honeypot", "domain": "ot", "description": "Low-interaction ICS/SCADA honeypot (Modbus, S7comm, SNMP, BACnet, HTTP) that produces realistic OT telemetry.", "repo": "https://github.com/mushorg/conpot", "docsUrl": "https://github.com/mushorg/conpot", "engine": "docker", "environments": ["local", "remote"], "source": {"kind": "compose", "repo": "https://github.com/mushorg/conpot"}, "resources": {"cpus": 1, "memoryMB": 1024, "diskGB": 3}, "services": [{"name": "web", "port": 8800, "protocol": "http"}], "attack": {"tactics": ["TA0001 Initial Access", "TA0002 Execution"], "techniques": ["T0846", "T0861"]}, "sigmaPath": "", "isolation": {"requiresEgress": false, "requiresPublicIp": false}, "deploy": {"available": true}, "verified": true},
+  {"id": "mobsf-lab", "name": "MobSF (Mobile Security Framework)", "domain": "mobile", "description": "Static and dynamic analysis platform for Android/iOS apps; pair it with the vulnerable APKs in this catalog.", "repo": "https://github.com/MobSF/Mobile-Security-Framework-MobSF", "docsUrl": "https://github.com/MobSF/Mobile-Security-Framework-MobSF", "engine": "docker", "environments": ["local", "remote"], "source": {"kind": "image", "image": "opensecurity/mobile-security-framework-mobsf", "port": 8000}, "resources": {"cpus": 2, "memoryMB": 2048, "diskGB": 6}, "services": [{"name": "web", "port": 8000, "protocol": "http"}], "attack": {"tactics": [], "techniques": []}, "sigmaPath": "", "isolation": {"requiresEgress": false, "requiresPublicIp": false}, "deploy": {"available": true}, "verified": true},
+
+  // ── Splunk Attack Range (local): its own engine, several VMs per deployment ──
+  {
+    id: "splunk-attack-range",
+    name: "Splunk Attack Range",
+    domain: "network",
+    description: "Splunk's detection-development range: a Splunk server with ESCU content plus Windows (optionally a domain controller), Linux and Kali hosts that forward Sysmon and logs to it, with Atomic Red Team ready to run. Built locally with VirtualBox from the project's own playbooks.",
+    repo: "https://github.com/splunk/attack_range",
+    docsUrl: "https://github.com/splunk/attack_range/blob/v3.0.0/docs/source/Attack_Range_Local.md",
+    engine: "attack-range",
+    environments: ["local"],
+    source: { kind: "attack-range", repo: "https://github.com/splunk/attack_range", ref: "v3.0.0" },
+    // Splunk server 6 GB + one Windows server 2 GB. Each extra Windows/Linux/Kali host adds 2 GB.
+    resources: { cpus: 5, memoryMB: 8192, diskGB: 40 },
+    services: [{ name: "splunk-web", port: 8000, protocol: "http" }, { name: "windows-rdp", port: 3389, protocol: "rdp" }],
+    attack: { tactics: ["TA0002 Execution", "TA0003 Persistence", "TA0006 Credential Access"], techniques: ["T1059", "T1053", "T1003", "T1547"] },
+    sigmaPath: "windows/",
+    isolation: { requiresEgress: true, requiresPublicIp: false },
+    options: [
+      { key: "windows", label: "Windows servers", type: "int", min: 0, max: 4, default: 1 },
+      { key: "createDomain", label: "Make the first Windows server a domain controller", type: "bool", default: false },
+      { key: "linux", label: "Linux servers", type: "int", min: 0, max: 2, default: 0 },
+      { key: "kali", label: "Add a Kali attacker box", type: "bool", default: false },
+      { key: "splunkMemoryMB", label: "Splunk server memory (MB)", type: "int", min: 4096, max: 16384, default: 6144 },
+    ],
+    deploy: { available: true },
+    verified: true,
+  },
+
   // ── VM labs (Vagrant engine) ──
   {
     id: "metasploitable3-ub1404",
@@ -288,14 +301,14 @@ export const LABS = [
     docsUrl: "https://github.com/rapid7/metasploitable3",
     engine: "vm",
     environments: ["local"],
-    source: { kind: "vagrant", box: "rapid7/metasploitable3-ub1404" },
+    source: { kind: "vagrant", box: "rapid7/metasploitable3-ub1404", ssh: { username: "vagrant", password: "vagrant" } },   // the box ships without Vagrant's insecure key
     resources: { cpus: 2, memoryMB: 2048, diskGB: 20 },
     services: [{ name: "ssh", port: 22, protocol: "tcp" }],
     attack: { tactics: ["TA0001 Initial Access", "TA0004 Privilege Escalation"], techniques: ["T1190", "T1068"] },
     sigmaPath: "linux/",
     isolation: { requiresEgress: false, requiresPublicIp: false },
     deploy: { available: true },
-    verified: false,
+    verified: true,
   },
   {
     id: "goad",

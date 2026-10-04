@@ -12,6 +12,14 @@
  */
 
 /** app → list of CVE/version variants. `path` is the directory inside vulhub. */
+// Deployed into a real spinner VM and checked on 2026-10-01 (HTTP answer, or the container running for non-HTTP services).
+const VERIFIED = new Set([
+  "httpd@CVE-2021-41773", "httpd@CVE-2021-42013", "httpd@CVE-2017-15715", "tomcat@CVE-2017-12615", "tomcat@CVE-2020-1938", "tomcat@weak-password",
+  "nginx@CVE-2013-4547", "nginx@insecure-config", "struts2@S2-046", "struts2@S2-053",
+  "spring@CVE-2022-22965", "spring@CVE-2022-22947", "log4j@CVE-2021-44228", "redis@CVE-2022-0543", "redis@unauth",
+  "jenkins@CVE-2018-1000861", "weblogic@CVE-2017-10271", "confluence@CVE-2022-26134",
+]);
+
 export const SERVICES = {
   httpd: {
     label: "Apache HTTP Server",
@@ -104,7 +112,7 @@ export function serviceEntries() {
         sigmaPath: "web/",
         isolation: { requiresEgress: false, requiresPublicIp: false },
         deploy: { available: true },
-        verified: false,
+        verified: VERIFIED.has(`${app}@${v.id}`),
       });
     }
   }

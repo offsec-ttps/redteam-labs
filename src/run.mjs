@@ -28,6 +28,20 @@ export async function capture(cmd, args, timeout = 10000, { cwd, env } = {}) {
   } catch { return null; }
 }
 
+/** Like capture, but feeds `input` to stdin (a script for `bash -s` on a remote host). Resolves with stdout or null. */
+export function captureWithInput(cmd, args, { input = "", timeout = 60_000, cwd, env } = {}) {
+  return new Promise((resolve) => {
+    const child = spawn(cmd, args, { cwd, env: env ? { ...process.env, ...env } : process.env, stdio: ["pipe", "pipe", "pipe"] });
+    let out = "", err = "";
+    const t = setTimeout(() => { child.kill("SIGKILL"); }, timeout);
+    child.stdout.on("data", (d) => { out += d; });
+    child.stderr.on("data", (d) => { err += d; });
+    child.on("close", (code) => { clearTimeout(t); resolve(code === 0 ? out.trim() : null); if (code !== 0 && process.env.RTLAB_DEBUG) console.error(err); });
+    child.on("error", () => { clearTimeout(t); resolve(null); });
+    child.stdin.end(input);
+  });
+}
+
 /**
  * Run a command, streaming each line to onLog. Rejects with the tail of output on
  * non-zero exit so failures are self-explanatory.

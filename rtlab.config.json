@@ -1,4 +1,5 @@
 {
   "//": "Storage root for lab clones, the vulhub cache and Vagrant boxes. Kept beside the tool (not inside detection-platform) so a `git clean` in another repo can never delete the lab store. Override per-run with RTLAB_HOME; delete this file to fall back to ~/.rtlab.",
-  "home": "/media/nested/SamsungEvo/Test-Projects/redteam-labs/.rtlab"
+  "home": "/media/nested/SamsungEvo/Test-Projects/redteam-labs/.rtlab",
+  "storage": []
 }

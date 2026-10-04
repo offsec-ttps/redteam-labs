@@ -6,7 +6,7 @@
  * at read time rather than trusted from disk.
  */
 
-import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { readFile, writeFile, mkdir, rename, rmdir, stat } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -52,7 +52,34 @@ async function readAll() {
 }
 async function writeAll(rows) {
   await mkdir(RT_HOME, { recursive: true });
-  await writeFile(STATE, JSON.stringify(rows, null, 2), "utf-8");
+  // write-then-rename so a crash never leaves a half-written state file
+  const tmp = `${STATE}.${process.pid}.tmp`;
+  await writeFile(tmp, JSON.stringify(rows, null, 2), "utf-8");
+  await rename(tmp, STATE);
+}
+
+/**
+ * Cross-process lock (mkdir is atomic). The platform worker runs several rtlab
+ * processes at once, so every read-modify-write must be serialised. A lock older
+ * than 30s is treated as abandoned by a crashed process.
+ */
+const LOCK = `${STATE}.lock`;
+async function withLock(fn) {
+  await mkdir(RT_HOME, { recursive: true });
+  const start = Date.now();
+  for (;;) {
+    try { await mkdir(LOCK); break; }
+    catch (e) {
+      if (e.code !== "EEXIST") throw e;
+      try {
+        const age = Date.now() - (await stat(LOCK)).mtimeMs;
+        if (age > 30_000) { await rmdir(LOCK).catch(() => {}); continue; }
+      } catch { continue; }
+      if (Date.now() - start > 60_000) throw new Error("timed out waiting for the state lock");
+      await new Promise((r) => setTimeout(r, 50));
+    }
+  }
+  try { return await fn(); } finally { await rmdir(LOCK).catch(() => {}); }
 }
 
 /**
@@ -61,20 +88,24 @@ async function writeAll(rows) {
  *   status, createdAt, expiresAt, ttl, noEgress, vmName?, composeProject? }
  */
 export async function add(row) {
-  const rows = await readAll();
-  await writeAll([row, ...rows.filter((r) => r.id !== row.id)]);
-  return row;
+  return withLock(async () => {
+    const rows = await readAll();
+    await writeAll([row, ...rows.filter((r) => r.id !== row.id)]);
+    return row;
+  });
 }
 export async function update(id, patch) {
-  const rows = await readAll();
-  const r = rows.find((x) => x.id === id);
-  if (!r) return null;
-  Object.assign(r, patch);
-  await writeAll(rows);
-  return r;
+  return withLock(async () => {
+    const rows = await readAll();
+    const r = rows.find((x) => x.id === id);
+    if (!r) return null;
+    Object.assign(r, patch);
+    await writeAll(rows);
+    return r;
+  });
 }
 export async function remove(id) {
-  await writeAll((await readAll()).filter((r) => r.id !== id));
+  return withLock(async () => writeAll((await readAll()).filter((r) => r.id !== id)));
 }
 export async function get(id) {
   const rows = await readAll();
@@ -87,4 +118,22 @@ export async function list() { return readAll(); }
 export async function expired() {
   const now = Date.now();
   return (await readAll()).filter((r) => r.expiresAt && new Date(r.expiresAt).getTime() <= now);
+}
+
+/**
+ * Reserve a free 10.66.N.0/24 for a spinner VM. Done under the lock and recorded
+ * immediately (as a placeholder row) so two concurrent deploys can never be handed
+ * the same network.
+ */
+export async function reserveSpinnerNet(id, pool = { min: 1, max: 250 }) {
+  return withLock(async () => {
+    const rows = await readAll();
+    const used = new Set(rows.map((r) => r.spinnerNet).filter(Boolean));
+    for (let n = pool.min; n <= pool.max; n++) {
+      if (used.has(n)) continue;
+      await writeAll([{ id, engine: "spinner", status: "provisioning", spinnerNet: n, createdAt: new Date().toISOString() }, ...rows]);
+      return n;
+    }
+    throw new Error("no free spinner network left in 10.66.0.0/16 — destroy an unused lab");
+  });
 }

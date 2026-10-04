@@ -36,19 +36,29 @@ export function vmAddressFor(bindIp, offset = 50) {
   return `${parts[0]}.${parts[1]}.${parts[2]}.${offset}`;
 }
 
-export function renderVagrantfile({ box, hostname, vmName, cpus, memoryMB, privateIp }) {
+export function renderVagrantfile({ box, hostname, vmName, cpus, memoryMB, privateIp, ssh = null, extraLines = [], providerLines = [] }) {
+  const rb = (v) => JSON.stringify(String(v));
   const lines = [
     'Vagrant.configure("2") do |config|',
     `  config.vm.box = "${box}"`,
     `  config.vm.hostname = "${hostname}"`,
+    "  config.vm.boot_timeout = 600",
+    // rtlab never shares files with a lab VM, and boxes with stale guest additions fail on this mount.
+    '  config.vm.synced_folder ".", "/vagrant", disabled: true',
   ];
+  // Some boxes (Metasploitable 3) do not carry Vagrant's insecure key: log in with the box's own user and
+  // password, and let Vagrant replace it with a fresh key on first boot as it normally does.
+  if (ssh?.username) lines.push(`  config.ssh.username = ${rb(ssh.username)}`);
+  if (ssh?.password) lines.push(`  config.ssh.password = ${rb(ssh.password)}`);
   if (privateIp) lines.push(`  config.vm.network "private_network", ip: "${privateIp}"`);
+  lines.push(...extraLines);
   lines.push(
     '  config.vm.provider "virtualbox" do |vb|',
     `    vb.name = "${vmName}"`,
     `    vb.cpus = ${cpus}`,
     `    vb.memory = ${memoryMB}`,
     "    vb.gui = false",
+    ...providerLines.map((l) => `    ${l}`),
     "  end",
     "end",
     "",
@@ -74,6 +84,7 @@ export async function deploy(entry, opts) {
     cpus: entry.resources.cpus,
     memoryMB: entry.resources.memoryMB,
     privateIp,
+    ssh: src.ssh || null,
   });
 
   const services = (entry.services || []).map((s) => ({
@@ -87,7 +98,13 @@ export async function deploy(entry, opts) {
   await writeFile(path.join(dir, "Vagrantfile"), vf, "utf-8");
 
   onLog?.(`vagrant up — box "${src.box}" downloads on first use (multi-GB)…`);
-  await run("vagrant", ["up", "--provider", "virtualbox"], { cwd: dir, timeout: 3_600_000, env: vagrantEnv, onLog });
+  try {
+    await run("vagrant", ["up", "--provider", "virtualbox"], { cwd: dir, timeout: 3_600_000, env: vagrantEnv, onLog });
+  } catch (e) {
+    // A VM that never came up must not stay registered and running; tear it down and keep the error.
+    await destroy({ dir }, { onLog }).catch(() => {});
+    throw e;
+  }
   return { dir, vmName, privateIp, services, ready: true, status: "running" };
 }
 

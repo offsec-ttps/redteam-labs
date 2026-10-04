@@ -12,7 +12,7 @@
  * address, and run ONLY that resolved file. Full control, no guesswork.
  */
 
-import { mkdir, writeFile, rm, rmdir, readdir } from "node:fs/promises";
+import { mkdir, writeFile, rm, rmdir, readdir, cp } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { has, run, capture, waitForPort } from "../run.mjs";
@@ -30,7 +30,7 @@ export async function preflight() {
 const projectFor = (id) => `rtlab-${id}`;
 
 /** Shallow-clone a repo (idempotent). */
-async function cloneOnce(repo, dest, ref, onLog) {
+export async function cloneOnce(repo, dest, ref, onLog) {
   if (existsSync(dest)) return dest;
   const args = ["clone", "--depth", "1"];
   if (ref && ref !== "master" && ref !== "main") args.push("--branch", ref);
@@ -68,7 +68,7 @@ async function resolveUpstream(composeFile) {
  * Rewrite every published port so it binds ONLY to bindIp, reallocating to a free
  * host port when needed. Returns the patched spec plus the resulting URL map.
  */
-async function bindPorts(spec, bindIp, entry) {
+async function bindPorts(spec, bindIp, entry, alloc = freePort) {
   const exposed = [];
   for (const [svcName, svc] of Object.entries(spec.services || {})) {
     if (!Array.isArray(svc.ports) || svc.ports.length === 0) continue;
@@ -78,7 +78,7 @@ async function bindPorts(spec, bindIp, entry) {
       const target = Number(p.target ?? p.containerPort ?? 0);
       if (!target) continue;
       const wanted = Number(p.published || target);
-      const host = await freePort(bindIp, wanted);
+      const host = await alloc(bindIp, wanted);
       rewritten.push(`${bindIp}:${host}:${target}${p.protocol === "udp" ? "/udp" : ""}`);
       exposed.push({ name: svcName, port: host, container: target, protocol: p.protocol || "tcp" });
     }
@@ -89,7 +89,7 @@ async function bindPorts(spec, bindIp, entry) {
     const first = Object.keys(spec.services || {})[0];
     if (first) {
       const target = entry.services[0].port;
-      const host = await freePort(bindIp, target);
+      const host = await alloc(bindIp, target);
       spec.services[first].ports = [`${bindIp}:${host}:${target}`];
       exposed.push({ name: first, port: host, container: target, protocol: "tcp" });
     }
@@ -166,12 +166,12 @@ async function containerIps(file, project, cwd) {
 }
 
 /** Build the compose spec for an entry, materialising sources as needed. */
-async function buildSpec(entry, { dir, bindIp, noEgress, onLog }) {
+export async function buildSpec(entry, { dir, bindIp, noEgress, onLog, alloc = freePort, env = null }) {
   const src = entry.source || {};
   let spec, exposed = [], cwd = dir;
 
   if (src.kind === "image") {
-    const host = await freePort(bindIp, src.port);
+    const host = await alloc(bindIp, src.port);
     spec = {
       name: projectFor(entry.id.replace(/[^a-z0-9]/gi, "-").toLowerCase()),
       services: {
@@ -185,21 +185,53 @@ async function buildSpec(entry, { dir, bindIp, noEgress, onLog }) {
       },
     };
     exposed = [{ name: entry.id, port: host, container: src.port, protocol: "tcp" }];
+  } else if (src.kind === "build") {
+    // Upstream ships only a Dockerfile (no published image): clone it and let Compose build it where it
+    // runs (on the host, or inside the spinner VM). Same port-binding guarantees as the "image" kind.
+    const clone = path.join(dir, "src");
+    await cloneOnce(src.repo, clone, src.ref, onLog);
+    const ctx = src.subdir ? path.join(clone, src.subdir) : clone;
+    // Extra files the recipe needs in the build context (an rtlab Dockerfile when upstream's does not build).
+    for (const [fname, content] of Object.entries(src.files || {})) {
+      if (fname.includes("/") || fname.includes("..")) throw new Error(`refusing to write "${fname}" outside the build context`);
+      await writeFile(path.join(ctx, fname), content);
+    }
+    const host = await alloc(bindIp, src.port);
+    const name = entry.id.replace(/[^a-z0-9]/gi, "-").toLowerCase();
+    spec = {
+      name: projectFor(name),
+      services: { [name]: {
+        build: { context: ctx, ...(src.dockerfile ? { dockerfile: src.dockerfile } : {}) },
+        ports: [`${bindIp}:${host}:${src.port}`], restart: "unless-stopped",
+        ...(src.env ? { environment: src.env } : {}), ...(src.command ? { command: src.command } : {}),
+      } },
+    };
+    exposed = [{ name: entry.id, port: host, container: src.port, protocol: "tcp" }];
   } else if (src.kind === "compose" || src.kind === "vulhub") {
     let projDir;
     if (src.kind === "vulhub") {
       const root = await vulhubRoot(onLog);
-      projDir = path.join(root, src.path);
-      if (!existsSync(projDir)) throw new Error(`vulhub path "${src.path}" not found — the pinned revision may have moved it.`);
+      const upstream = path.join(root, src.path);
+      if (!existsSync(upstream)) throw new Error(`vulhub path "${src.path}" not found — the pinned revision may have moved it.`);
+      // Copy the lab's own directory into the deployment: the shared checkout lives outside it, and a spinner VM
+      // only sees the deployment directory. Vulhub projects are self-contained (images or a local build context).
+      projDir = path.join(dir, "src");
+      await cp(upstream, projDir, { recursive: true, force: true });
     } else {
       const clone = path.join(dir, "src");
       await cloneOnce(src.repo, clone, src.ref, onLog);
       projDir = src.subdir ? path.join(clone, src.subdir) : clone;
     }
-    const composeFile = await findComposeFile(projDir);
+    // Some projects expect a file they do not ship (an env file the README tells you to write).
+    for (const [name, content] of Object.entries(src.files || {})) {
+      if (name.includes("..") || path.isAbsolute(name)) throw new Error(`refusing to write "${name}" outside the project`);
+      await writeFile(path.join(projDir, name), content, "utf-8");
+    }
+    const composeFile = src.file ? path.join(projDir, src.file) : await findComposeFile(projDir);
+    if (src.file && !existsSync(composeFile)) throw new Error(`compose file "${src.file}" not found in ${projDir}`);
     const r = await resolveUpstream(composeFile);
     cwd = r.cwd;
-    const bound = await bindPorts(r.spec, bindIp, entry);
+    const bound = await bindPorts(r.spec, bindIp, entry, alloc);
     spec = bound.spec;
     exposed = bound.exposed;
   } else {
@@ -207,12 +239,19 @@ async function buildSpec(entry, { dir, bindIp, noEgress, onLog }) {
   }
 
   if (noEgress) spec = applyNoEgress(spec);
+  if (env && Object.keys(env).length) {
+    // Deploy-time options (a model choice, an API key) reach every container of this lab as environment.
+    for (const svc of Object.values(spec.services || {})) {
+      const cur = Array.isArray(svc.environment) ? Object.fromEntries(svc.environment.map((e) => { const i = e.indexOf("="); return i < 0 ? [e, ""] : [e.slice(0, i), e.slice(i + 1)]; })) : (svc.environment || {});
+      svc.environment = { ...cur, ...env };
+    }
+  }
   return { spec, cwd, exposed };
 }
 
 /** Deploy. Returns a plain result object (no CLI coupling). */
 export async function deploy(entry, opts) {
-  const { id, bindIp, noEgress = false, dryRun = false, onLog } = opts;
+  const { id, bindIp, noEgress = false, dryRun = false, onLog, labEnv = null } = opts;
   await preflight();
   const dir = path.join(LABS_DIR, id);
   // A dry run must not leave anything behind. Clone-based sources still need a
@@ -220,9 +259,9 @@ export async function deploy(entry, opts) {
   // so we create it, then remove it again below if the dry run wrote nothing.
   await mkdir(dir, { recursive: true });
 
-  const { spec, cwd, exposed } = await buildSpec(entry, { dir, bindIp, noEgress, onLog });
+  const { spec, cwd, exposed } = await buildSpec(entry, { dir, bindIp, noEgress, onLog, env: labEnv });
   const file = path.join(dir, RESOLVED);
-  if (!dryRun) await writeFile(file, JSON.stringify(spec, null, 2), "utf-8");
+  if (!dryRun) await writeFile(file, JSON.stringify(spec, null, 2), { encoding: "utf-8", mode: 0o600 });   // may hold an API key
 
   const project = projectFor(id);
   const services = exposed.map((e) => ({
@@ -231,8 +270,8 @@ export async function deploy(entry, opts) {
   }));
 
   if (dryRun) {
-    // Leave the store exactly as we found it when nothing was materialised.
-    await rmdir(dir).catch(() => {});
+    // Leave the store exactly as we found it: the clone existed only to resolve the compose file.
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
     return { dryRun: true, dir, file, project, bindIp, services, spec };
   }
 

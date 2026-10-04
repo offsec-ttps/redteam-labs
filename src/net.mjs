@@ -59,8 +59,13 @@ function portFree(host, port) {
   });
 }
 
-/** First free port at or after `start` on the given address. */
+/**
+ * First free port at or after `start` on the given address. Ports below 1024 need root to bind, so an
+ * unprivileged run maps them up by 8000 (80 -> 8080, 443 -> 8443): the lab still answers on its own port
+ * inside the container; only the published host port moves.
+ */
 export async function freePort(host, start) {
+  if (start < 1024 && typeof process.getuid === "function" && process.getuid() !== 0) start += 8000;
   for (let p = start; p < start + 200; p++) {
     if (await portFree(host, p)) return p;
   }
@@ -100,6 +105,7 @@ export function fmtRemaining(expiresAt) {
   if (!expiresAt) return "manual";
   const ms = new Date(expiresAt).getTime() - Date.now();
   if (ms <= 0) return "expired";
-  const h = Math.floor(ms / 3_600_000), m = Math.round((ms % 3_600_000) / 60_000);
+  const total = Math.max(1, Math.round(ms / 60_000));     // round once, then split, so 59.6m can't print "0h60m"
+  const h = Math.floor(total / 60), m = total % 60;
   return h > 0 ? `${h}h${m}m` : `${m}m`;
 }

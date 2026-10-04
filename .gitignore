@@ -8,3 +8,28 @@ rtlab.creds.json
 
 # local lab store (clones, vulhub cache, Vagrant boxes)
 .rtlab/
+
+# platform (backend + frontend)
+platform/**/.venv/
+platform/**/__pycache__/
+platform/**/.pytest_cache/
+platform/**/node_modules/
+platform/frontend/.next/
+platform/.env
+platform/**/*.egg-info/
+platform/frontend/e2e/.results/
+platform/frontend/test-results/
+platform/.run/
+platform/.env.e2e
+platform/.run/
+
+# local secrets (cloud keys for rtlab); never commit
+.env
+.env.*
+!.env.example
+
+# VPS private key (never commit)
+id_ed25519_vps*
+
+# student VPN configs (private keys): never commit
+vpn-peers/

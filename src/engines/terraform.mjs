@@ -118,6 +118,23 @@ export async function deploy(entry, opts) {
 }
 
 /**
+ * The billable step, run only on an explicit `rtlab cloud apply <id> --yes` (or a control-plane job the user confirmed):
+ * applies the saved plan, then reads the outputs so the lab's endpoints can be shown.
+ */
+export async function apply(dep, { onLog } = {}) {
+  const provider = dep.provider || "aws";
+  const env = credEnv(provider);
+  if (!dep.tfDir || !existsSync(path.join(dep.tfDir, "rtlab.tfplan"))) throw new Error("no saved plan for this lab on this machine; run `rtlab deploy` again to plan first");
+  onLog?.("terraform apply — creating the planned resources…");
+  await run("terraform", ["apply", "-input=false", "-no-color", "rtlab.tfplan"], { cwd: dep.tfDir, timeout: 3 * 3_600_000, env, onLog });
+  const raw = await capture("terraform", ["output", "-json", "-no-color"], 60_000, { cwd: dep.tfDir, env });
+  let outputs = {};
+  try { outputs = Object.fromEntries(Object.entries(JSON.parse(raw || "{}")).map(([k, v]) => [k, v?.value])); } catch { outputs = {}; }
+  const services = Object.entries(outputs).filter(([, v]) => typeof v === "string" && /^https?:\/\//.test(v)).map(([k, v]) => ({ name: k, port: Number(new URL(v).port) || (v.startsWith("https") ? 443 : 80), protocol: v.startsWith("https") ? "https" : "http", url: v }));
+  return { status: "running", services, outputs };
+}
+
+/**
  * Cloud labs have no cheap stop/start — destroy-and-reapply is the only honest
  * lifecycle, and pretending otherwise would leave resources billing.
  */
@@ -133,13 +150,21 @@ export async function stop() {
  * and refuses to drop the directory while Terraform state still holds resources,
  * because deleting that state orphans billable infrastructure.
  */
-export async function destroy(dep, { onLog } = {}) {
+export async function destroy(dep, { onLog, destroyCloud = false } = {}) {
   const provider = dep.provider || "aws";
   const env = credEnv(provider);
   let remaining = 0;
   if (dep.tfDir && existsSync(dep.tfDir)) {
     const out = await capture("terraform", ["state", "list"], 60_000, { cwd: dep.tfDir, env }).catch(() => null);
     remaining = out ? out.split("\n").filter(Boolean).length : 0;
+  }
+  if (remaining > 0 && destroyCloud) {
+    // Explicit, confirmed teardown (`--destroy-cloud`): the only way rtlab ever destroys cloud resources itself.
+    onLog?.(`terraform destroy — removing ${remaining} resource(s)…`);
+    await run("terraform", ["destroy", "-auto-approve", "-input=false", "-no-color"], { cwd: dep.tfDir, timeout: 3 * 3_600_000, env, onLog });
+    const out = await capture("terraform", ["state", "list"], 60_000, { cwd: dep.tfDir, env }).catch(() => null);
+    remaining = out ? out.split("\n").filter(Boolean).length : 0;
+    if (remaining > 0) throw new Error(`terraform destroy left ${remaining} resource(s); the local record is kept so they stay reachable`);
   }
   if (remaining > 0) {
     throw new Error(

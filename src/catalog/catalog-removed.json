@@ -1,0 +1,589 @@
+{
+  "blackhills-ad-lab": {
+    "name": "BlackHills AD Lab",
+    "domain": "ad",
+    "repo": "https://github.com/blackhillsinfosec/BlackHills-AD-Lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "daft": {
+    "name": "DAFT",
+    "domain": "ad",
+    "repo": "https://github.com/SecurityRiskAdvisors/DAFT",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "elastic-detection-lab": {
+    "name": "Elastic Detection Lab",
+    "domain": "ad",
+    "repo": "https://github.com/elastic/detection-rules-testing",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "hackthebox-pro-labs": {
+    "name": "HackTheBox Pro Labs",
+    "domain": "ad",
+    "repo": "https://www.hackthebox.com/hacker/pro-labs",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "invoke-adlabdeployer": {
+    "name": "Invoke-ADLabDeployer",
+    "domain": "ad",
+    "repo": "https://github.com/ChrisPineapple/Invoke-ADLabDeployer",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "king-of-the-hill": {
+    "name": "King of the Hill",
+    "domain": "ad",
+    "repo": "https://github.com/KingOfTheHillLab/KotH",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "malware-lab": {
+    "name": "Malware Lab",
+    "domain": "ad",
+    "repo": "https://github.com/cmdlab/malware-lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "poshc2-lab": {
+    "name": "PoshC2 Lab",
+    "domain": "ad",
+    "repo": "https://github.com/PoshC2/PoshC2",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "purple-knight-semperis": {
+    "name": "Purple Knight (Semperis)",
+    "domain": "ad",
+    "repo": "https://www.purpleknight.com/",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "soc-fortress": {
+    "name": "SOC Fortress",
+    "domain": "ad",
+    "repo": "https://github.com/CyberDefenders/soc-fortress",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "tcm-peh-lab": {
+    "name": "TCM PEH Lab",
+    "domain": "ad",
+    "repo": "https://github.com/TCM-Course/Lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "vulnad": {
+    "name": "VulnAD",
+    "domain": "ad",
+    "repo": "https://github.com/MyStuffExplore/VulnAD",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "vulnerable-ad": {
+    "name": "Vulnerable AD",
+    "domain": "ad",
+    "repo": "https://github.com/sonySMB/vulnerable-AD",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "winpilot": {
+    "name": "WinPilot",
+    "domain": "ad",
+    "repo": "https://github.com/OTRF/WinPilot",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "argo-goat": {
+    "name": "Argo Goat",
+    "domain": "cicd",
+    "repo": "https://github.com/step-security/argo-goat",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "ci-tests-chainguard": {
+    "name": "CI Tests (Chainguard)",
+    "domain": "cicd",
+    "repo": "https://github.com/chainguard-dev/ci-tests",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "gitlab-cicd-goat": {
+    "name": "GitLab CICD Goat",
+    "domain": "cicd",
+    "repo": "https://github.com/step-security/gitlab-goat",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "helmgoat": {
+    "name": "HelmGoat",
+    "domain": "cicd",
+    "repo": "https://github.com/bridgecrewio/helm-goat",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "jenkins-goat": {
+    "name": "Jenkins Goat",
+    "domain": "cicd",
+    "repo": "https://github.com/step-security/jenkins-goat",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "sbom-lab-anchore": {
+    "name": "SBOM Lab (Anchore)",
+    "domain": "cicd",
+    "repo": "https://github.com/anchore/sbom-lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "sigstore-playground": {
+    "name": "Sigstore Playground",
+    "domain": "cicd",
+    "repo": "https://github.com/sigstore/community-playground",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "slsa-playground": {
+    "name": "SLSA Playground",
+    "domain": "cicd",
+    "repo": "https://slsa.dev/",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "tekton-goat": {
+    "name": "Tekton Goat",
+    "domain": "cicd",
+    "repo": "https://github.com/step-security/tekton-goat",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "dvca": {
+    "name": "DVCA",
+    "domain": "cloud",
+    "repo": "https://github.com/haerinia/DVCA",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "hacking-the-cloud": {
+    "name": "Hacking The Cloud",
+    "domain": "cloud",
+    "repo": "https://hackingthe.cloud/",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "sans-cloud-security-workshop": {
+    "name": "SANS Cloud Security Workshop",
+    "domain": "cloud",
+    "repo": "https://github.com/sans/cloud-security-workshop",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "audit-kubernetes": {
+    "name": "Audit Kubernetes",
+    "domain": "iac",
+    "repo": "https://github.com/DevSecOpsPlayground/Audit-Kubernetes",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "k8sgoat-iac": {
+    "name": "K8sGoat (IaC)",
+    "domain": "iac",
+    "repo": "https://github.com/bridgecrewio/k8sgoat",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "pacpro-play": {
+    "name": "PACPro Play",
+    "domain": "iac",
+    "repo": "https://github.com/Accenture/pacpro",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "regula-lab": {
+    "name": "Regula Lab",
+    "domain": "iac",
+    "repo": "https://github.com/aquasecurity/regula",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "bark-lab": {
+    "name": "BARK Lab",
+    "domain": "identity",
+    "repo": "https://github.com/Rohnny/BARK-Lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "entraattack": {
+    "name": "EntraAttack",
+    "domain": "identity",
+    "repo": "https://github.com/manwhoami/EntraAttack",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "keycloak-goat": {
+    "name": "Keycloak Goat",
+    "domain": "identity",
+    "repo": "https://github.com/jboss/keycloak-goat",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "labforge-ad-playground": {
+    "name": "LabForge AD Playground",
+    "domain": "identity",
+    "repo": "https://github.com/fixthebug/LabForge",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "munchhausen-cs-lab": {
+    "name": "Munchhausen (CS Lab)",
+    "domain": "identity",
+    "repo": "https://github.com/microsoft/CSLab-Munchhausen",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "oidc-lab": {
+    "name": "OIDC Lab",
+    "domain": "identity",
+    "repo": "https://github.com/ossf-critial/oidc-lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "okta-auth-lab": {
+    "name": "Okta Auth Lab",
+    "domain": "identity",
+    "repo": "https://github.com/oktadev/auth-lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "cka-cks-mastery": {
+    "name": "CKA-CKS Mastery",
+    "domain": "k8s",
+    "repo": "https://github.com/r0hi5/CKA-CKS-Mastery",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "cks-challenge": {
+    "name": "CKS Challenge",
+    "domain": "k8s",
+    "repo": "https://github.com/walidshaari/cks-challenge",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "container-attack-demo": {
+    "name": "Container Attack Demo",
+    "domain": "k8s",
+    "repo": "https://github.com/wiz-sec/container-attack-demo",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "container-security-lab": {
+    "name": "Container Security Lab",
+    "domain": "k8s",
+    "repo": "https://github.com/raesene/container_security_lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "docker-attack-platform": {
+    "name": "Docker Attack Platform",
+    "domain": "k8s",
+    "repo": "https://github.com/lvcccb/docker-attack-platform",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "dvcc": {
+    "name": "DVCC",
+    "domain": "k8s",
+    "repo": "https://github.com/haerinia/dvcc",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "k8s-security-lab": {
+    "name": "K8s Security Lab",
+    "domain": "k8s",
+    "repo": "https://github.com/mrtc0/k8s-security-lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "kubesecurity-lab": {
+    "name": "KubeSecurity Lab",
+    "domain": "k8s",
+    "repo": "https://github.com/walidshaari/Kubernetes-Security",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "kubestriker-lab": {
+    "name": "Kubestriker Lab",
+    "domain": "k8s",
+    "repo": "https://github.com/ridgebucket/kubestriker-lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "misconfig-kubernetes": {
+    "name": "Misconfig-Kubernetes",
+    "domain": "k8s",
+    "repo": "https://github.com/aquasecurity/misconfig-kubernetes",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "auditd-lab": {
+    "name": "Auditd Lab",
+    "domain": "linux",
+    "repo": "https://github.com/Neo23x0/auditd-lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "damn-vulnerable-linux": {
+    "name": "Damn Vulnerable Linux",
+    "domain": "linux",
+    "repo": "https://github.com/JonathanGiles/DVL",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "falco-playground": {
+    "name": "Falco Playground",
+    "domain": "linux",
+    "repo": "https://github.com/falcosecurity/playground",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "linux-privesc-arena": {
+    "name": "Linux PrivEsc Arena",
+    "domain": "linux",
+    "repo": "https://github.com/sajadsarvari/linux-privesc-arena",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "linuxfortress": {
+    "name": "LinuxFortress",
+    "domain": "linux",
+    "repo": "https://github.com/0xrawg/linux-fortress",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "overthewire": {
+    "name": "OverTheWire",
+    "domain": "linux",
+    "repo": "https://overthewire.org/wargames/",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "selinux-playground": {
+    "name": "SELinux Playground",
+    "domain": "linux",
+    "repo": "https://github.com/SELinuxProject/selinux-playground",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "tcm-linux-priv-esc": {
+    "name": "TCM Linux Priv-Esc",
+    "domain": "linux",
+    "repo": "https://github.com/TCM-Course/Linux-Priv-Esc",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "tryhackme-linux-privesc": {
+    "name": "TryHackMe Linux PrivEsc",
+    "domain": "linux",
+    "repo": "https://tryhackme.com",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "vulnhub-images": {
+    "name": "VulnHub Images",
+    "domain": "linux",
+    "repo": "https://www.vulnhub.com/",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "agenticsecurity": {
+    "name": "AgenticSecurity",
+    "domain": "llm",
+    "repo": "https://github.com/maior/agentic-security",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "ai-village-ctf": {
+    "name": "AI Village CTF",
+    "domain": "llm",
+    "repo": "https://www.aivillage.ai/",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "anthropic-red-team-suite": {
+    "name": "Anthropic Red Team Suite",
+    "domain": "llm",
+    "repo": "https://github.com/anthropics/anthropic-red-team",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "damn-vulnerable-mcp": {
+    "name": "Damn Vulnerable MCP",
+    "domain": "llm",
+    "repo": "https://github.com/modelcontextprotocol/dvmcp",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "inspector-mcp": {
+    "name": "Inspector MCP",
+    "domain": "llm",
+    "repo": "https://github.com/step-security/inspector-mcp",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "invariant-labs-mcp-tests": {
+    "name": "Invariant Labs MCP Tests",
+    "domain": "llm",
+    "repo": "https://github.com/invariantlabs-ai/mcp-safety",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "lakera-gandalf": {
+    "name": "Lakera Gandalf",
+    "domain": "llm",
+    "repo": "https://gandalf.lakera.ai/",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "llmctf": {
+    "name": "LLMCTF",
+    "domain": "llm",
+    "repo": "https://github.com/LLM-CTF/llmctf",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "llmgoat": {
+    "name": "LLMGoat",
+    "domain": "llm",
+    "repo": "https://github.com/danielmiessler/LLM-Goat",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "mcp-goat": {
+    "name": "MCP-Goat",
+    "domain": "llm",
+    "repo": "https://github.com/obra/mcp-security-lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "mcpscan-playground": {
+    "name": "MCPScan Playground",
+    "domain": "llm",
+    "repo": "https://github.com/protectai/mcp-scan",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "nagini": {
+    "name": "Nagini",
+    "domain": "llm",
+    "repo": "https://github.com/sleeyax/nagini",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "owasp-agentic-llm-top-10": {
+    "name": "OWASP Agentic LLM Top 10",
+    "domain": "llm",
+    "repo": "https://github.com/OWASP-agentic/OWASP-Agentic-LLM-Top-10",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "tensor-trust": {
+    "name": "Tensor Trust",
+    "domain": "llm",
+    "repo": "https://tensortrust.ai/",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "diva-android": {
+    "name": "DIVA Android",
+    "domain": "mobile",
+    "repo": "https://github.com/appsectrainings/diva-android",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "dvhma": {
+    "name": "DVHMA",
+    "domain": "mobile",
+    "repo": "https://github.com/0xroot/DVHMA",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "injuredandroid": {
+    "name": "InjuredAndroid",
+    "domain": "mobile",
+    "repo": "https://github.com/AnonJax/InjuredAndroid",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "bluespawn": {
+    "name": "BLUESPAWN",
+    "domain": "network",
+    "repo": "https://github.com/BlueTeam-IR/BLUESPAWN",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "cyberdefenders-ctfs": {
+    "name": "CyberDefenders CTFs",
+    "domain": "network",
+    "repo": "https://cyberdefenders.org",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "letsdefend-io": {
+    "name": "LetsDefend.io",
+    "domain": "network",
+    "repo": "https://letsdefend.io",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "malware-traffic-analysis": {
+    "name": "Malware Traffic Analysis",
+    "domain": "network",
+    "repo": "https://www.malware-traffic-analysis.net/",
+    "reason": "no source repository (https://www.malware-traffic-analysis.net/)"
+  },
+  "netresec-samples": {
+    "name": "NetRESec Samples",
+    "domain": "network",
+    "repo": "https://www.netresec.com/?page=PcapFiles",
+    "reason": "no source repository (https://www.netresec.com/?page=PcapFiles)"
+  },
+  "pcap-files-collection": {
+    "name": "PCAP Files Collection",
+    "domain": "network",
+    "repo": "https://github.com/joeylane/pcapfiles",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "pcap-labs": {
+    "name": "PCAP Labs",
+    "domain": "network",
+    "repo": "https://github.com/markleehunt/pcap-labs",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "tryhackme-soc": {
+    "name": "TryHackMe SOC",
+    "domain": "network",
+    "repo": "https://tryhackme.com",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "wireshark-sample-captures": {
+    "name": "Wireshark Sample Captures",
+    "domain": "network",
+    "repo": "https://wiki.wireshark.org/SampleCaptures",
+    "reason": "no source repository (https://wiki.wireshark.org/SampleCaptures)"
+  },
+  "cymilab": {
+    "name": "CymiLab",
+    "domain": "ot",
+    "repo": "https://github.com/0xc0z/CymiLab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "damn-vulnerable-chemical-process": {
+    "name": "Damn Vulnerable Chemical Process",
+    "domain": "ot",
+    "repo": "https://github.com/ukncsc/DVC",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "damn-vulnerable-plc": {
+    "name": "Damn Vulnerable PLC",
+    "domain": "ot",
+    "repo": "https://github.com/dhondta/damn-vulnerable-plc",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "firmware-slap": {
+    "name": "Firmware Slap",
+    "domain": "ot",
+    "repo": "https://github.com/ChrisTheCoolHut/FirmwareSlap",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "ics-security-testbeds": {
+    "name": "ICS Security Testbeds",
+    "domain": "ot",
+    "repo": "https://github.com/ITI/ICS-Security-Testbeds",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "iot-lab": {
+    "name": "IoT Lab",
+    "domain": "ot",
+    "repo": "https://github.com/HighTable/IoT-Lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "minicps3": {
+    "name": "MiniCPS3",
+    "domain": "ot",
+    "repo": "https://github.com/scadastrangelove/MiniCPS3",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "api-sec-lab-checkmarx": {
+    "name": "API Sec Lab (Checkmarx)",
+    "domain": "web",
+    "repo": "https://github.com/Checkmarx/api-sec-lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "buggybank": {
+    "name": "BuggyBank",
+    "domain": "web",
+    "repo": "https://github.com/jemnight/BuggyBank",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "owasp-pygoat": {
+    "name": "OWASP PyGoat",
+    "domain": "web",
+    "repo": "https://github.com/adeyosemanaj/PyGoat",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "portswigger-web-security-academy": {
+    "name": "PortSwigger Web Security Academy",
+    "domain": "web",
+    "repo": "https://portswigger.net/web-security",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "cloudseclist-labs": {
+    "name": "CloudSecList Labs",
+    "domain": "cloud",
+    "repo": "https://github.com/cloudseclabs",
+    "reason": "link is a GitHub organisation, not a project"
+  },
+  "purple-knight": {
+    "name": "Purple Knight",
+    "domain": "identity",
+    "repo": "https://www.purpleknight.com",
+    "reason": "hosted platform, not an installable lab"
+  },
+  "tcm-webappsec-labs": {
+    "name": "TCM WebAppSec Labs",
+    "domain": "web",
+    "repo": "https://github.com/TCM-Course/Lab",
+    "reason": "repo does not exist (GitHub 404)"
+  },
+  "sadcloud": {
+    "id": "sadcloud",
+    "reason": "GitHub repository naggie/sadcloud no longer exists (HTTP 404 on 2026-10-01).",
+    "name": "Sadcloud"
+  }
+}

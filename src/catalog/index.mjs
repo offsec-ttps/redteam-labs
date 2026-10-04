@@ -38,7 +38,9 @@ export function allEntries() {
     take(e);
     imported.push(e);
   }
-  return [...LABS, ...imported, ...serviceEntries()];
+  // spinnerEligible: can run as containers inside a spinner VM (auto-deployable docker labs)
+  return [...LABS, ...imported, ...serviceEntries()]
+    .map((e) => ({ ...e, spinnerEligible: e.engine === "docker" && !!e.deploy?.available }));
 }
 
 export function findEntry(id) {
