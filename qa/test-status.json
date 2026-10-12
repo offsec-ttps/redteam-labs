@@ -1,0 +1,723 @@
+{
+  "juice-shop": {
+    "domain": "web",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "dvwa": {
+    "domain": "web",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "webgoat": {
+    "domain": "web",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "vampi": {
+    "domain": "web",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "dvga": {
+    "domain": "web",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "crapi": {
+    "domain": "web",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "cicd-goat": {
+    "domain": "cicd",
+    "engine": "docker",
+    "local": "green",
+    "vps": "yellow",
+    "cloud": "na"
+  },
+  "kubernetes-goat": {
+    "domain": "k8s",
+    "engine": "k8s",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "awsgoat": {
+    "domain": "cloud",
+    "engine": "terraform",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "yellow"
+  },
+  "terragoat": {
+    "domain": "iac",
+    "engine": "terraform",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "yellow"
+  },
+  "cloudfoxable": {
+    "domain": "cloud",
+    "engine": "terraform",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "yellow"
+  },
+  "dvna": {
+    "domain": "web",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "dvws-node": {
+    "domain": "web",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "owasp-nodegoat": {
+    "domain": "web",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "owasp-railsgoat": {
+    "domain": "web",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "owasp-security-shepherd": {
+    "domain": "web",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "damn-vulnerable-llm-agent": {
+    "domain": "llm",
+    "engine": "docker",
+    "local": "green",
+    "vps": "yellow",
+    "cloud": "na"
+  },
+  "iotgoat-owasp": {
+    "domain": "ot",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "conpot-honeypot": {
+    "domain": "ot",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "mobsf-lab": {
+    "domain": "mobile",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "splunk-attack-range": {
+    "domain": "network",
+    "engine": "attack-range",
+    "local": "green",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "metasploitable3-ub1404": {
+    "domain": "linux",
+    "engine": "vm",
+    "local": "green",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "goad": {
+    "domain": "ad",
+    "engine": "vm",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "automatedlab": {
+    "domain": "ad",
+    "engine": "vm",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "azure-sentinel-lab": {
+    "domain": "ad",
+    "engine": "terraform",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "yellow"
+  },
+  "detectionlab": {
+    "domain": "ad",
+    "engine": "vm",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "labbuilder": {
+    "domain": "ad",
+    "engine": "vm",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "cncf-supply-chain-lab": {
+    "domain": "cicd",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "dependency-track-demo": {
+    "domain": "cicd",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "grype-lab": {
+    "domain": "cicd",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "osv-scanner-tests": {
+    "domain": "cicd",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "secure-workflows": {
+    "domain": "cicd",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "syft-lab": {
+    "domain": "cicd",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "trivy-vuln-lab": {
+    "domain": "cicd",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "azuregoat": {
+    "domain": "cloud",
+    "engine": "terraform",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "yellow"
+  },
+  "cloudgoat": {
+    "domain": "cloud",
+    "engine": "terraform",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "yellow"
+  },
+  "eks-goat-owasp": {
+    "domain": "cloud",
+    "engine": "terraform",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "yellow"
+  },
+  "entragoat": {
+    "domain": "cloud",
+    "engine": "terraform",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "yellow"
+  },
+  "gcpgoat": {
+    "domain": "cloud",
+    "engine": "terraform",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "yellow"
+  },
+  "github-actions-goat": {
+    "domain": "cloud",
+    "engine": "terraform",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "yellow"
+  },
+  "cfngoat": {
+    "domain": "iac",
+    "engine": "terraform",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "yellow"
+  },
+  "checkov-playground": {
+    "domain": "iac",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "conftest-playground": {
+    "domain": "iac",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "kics-playground": {
+    "domain": "iac",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "opa-playground": {
+    "domain": "iac",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "terrascan-playground": {
+    "domain": "iac",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "aadinternals": {
+    "domain": "identity",
+    "engine": "terraform",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "yellow"
+  },
+  "bloodhound-ce": {
+    "domain": "identity",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "pingcastle-lab": {
+    "domain": "identity",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "roadtools-lab": {
+    "domain": "identity",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "stormspotter": {
+    "domain": "identity",
+    "engine": "terraform",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "yellow"
+  },
+  "falco-ctf": {
+    "domain": "k8s",
+    "engine": "k8s",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "kubescape-hippo": {
+    "domain": "k8s",
+    "engine": "k8s",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "kyverno-policy-lab": {
+    "domain": "k8s",
+    "engine": "k8s",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "polaris-playground": {
+    "domain": "k8s",
+    "engine": "k8s",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "tetragon-lab": {
+    "domain": "k8s",
+    "engine": "k8s",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "tracee-sample-lab": {
+    "domain": "k8s",
+    "engine": "k8s",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "sysmon-for-linux": {
+    "domain": "linux",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "wazuh-agent-lab": {
+    "domain": "linux",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "garak": {
+    "domain": "llm",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "owasp-llm-top10-demo": {
+    "domain": "llm",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "pacu-llm": {
+    "domain": "llm",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "promptfoo": {
+    "domain": "llm",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "pyrit-microsoft": {
+    "domain": "llm",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "androgoat": {
+    "domain": "mobile",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "damn-vulnerable-ios-app": {
+    "domain": "mobile",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "mstg-hacking-playground": {
+    "domain": "mobile",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "owasp-igoat": {
+    "domain": "mobile",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "owasp-mstg-vulnerable-apps": {
+    "domain": "mobile",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "arkime-moloch-lab": {
+    "domain": "network",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "mordor-forge": {
+    "domain": "network",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "mordor-datasets": {
+    "domain": "network",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "sigmahq-ruleset": {
+    "domain": "network",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "splunk-bots-v2": {
+    "domain": "network",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "splunk-bots-v3": {
+    "domain": "network",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "stenographer-lab": {
+    "domain": "network",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "suricata-playground": {
+    "domain": "network",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "threathunter-playbook": {
+    "domain": "network",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "zeek-security-repo": {
+    "domain": "network",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "dvrf-router-firmware": {
+    "domain": "ot",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "redpoint-digitalbond": {
+    "domain": "ot",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "t-pot-honeypot": {
+    "domain": "ot",
+    "engine": "manual",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "dvta": {
+    "domain": "web",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "mutillidae": {
+    "domain": "web",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "xvwa": {
+    "domain": "web",
+    "engine": "docker",
+    "local": "untested",
+    "vps": "na",
+    "cloud": "na"
+  },
+  "httpd@CVE-2021-41773": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "httpd@CVE-2021-42013": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "httpd@CVE-2017-15715": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "tomcat@CVE-2017-12615": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "tomcat@CVE-2020-1938": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "tomcat@weak-password": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "nginx@CVE-2013-4547": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "nginx@insecure-config": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "struts2@S2-046": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "struts2@S2-053": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "spring@CVE-2022-22965": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "spring@CVE-2022-22947": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "log4j@CVE-2021-44228": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "redis@CVE-2022-0543": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "redis@unauth": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "jenkins@CVE-2018-1000861": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "weblogic@CVE-2017-10271": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  },
+  "confluence@CVE-2022-26134": {
+    "domain": "service-cve",
+    "engine": "docker",
+    "local": "green",
+    "vps": "green",
+    "cloud": "na"
+  }
+}

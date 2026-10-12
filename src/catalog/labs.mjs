@@ -142,6 +142,26 @@ export const LABS = [
     verified: true,
   },
   {
+    id: "mutillidae",
+    name: "Mutillidae II",
+    domain: "web",
+    description: "OWASP Mutillidae II — a deliberately vulnerable PHP app with 40+ labs covering the OWASP Top 10, backed by MySQL and an LDAP directory.",
+    repo: "https://github.com/webpwnized/mutillidae",
+    docsUrl: "https://github.com/webpwnized/mutillidae-docker",
+    engine: "docker",
+    environments: ["local", "remote"],
+    // The deployable stack lives in the sibling mutillidae-docker repo; its compose pulls prebuilt
+    // webpwnized/mutillidae:* images (no local build needed) and uses only named volumes, so it runs over SSH.
+    source: { kind: "compose", repo: "https://github.com/webpwnized/mutillidae-docker", subdir: ".build" },
+    resources: { cpus: 2, memoryMB: 2048, diskGB: 4 },
+    services: [{ name: "www", port: 80, protocol: "http" }],
+    attack: { tactics: web.tactics, techniques: ["T1190", "T1059", "T1505"] },
+    sigmaPath: "web/",
+    isolation: { requiresEgress: true, requiresPublicIp: false },
+    deploy: { available: true },
+    verified: true,   // VPS over SSH 2026-10-11: www:80 → HTTP 302, admin UIs 81/82 → 200
+  },
+  {
     id: "cicd-goat",
     name: "CI/CD Goat",
     domain: "cicd",
@@ -158,6 +178,25 @@ export const LABS = [
     isolation: { requiresEgress: true, requiresPublicIp: false },
     deploy: { available: true },
     verified: true,
+  },
+  {
+    id: "bloodhound-ce",
+    name: "BloodHound CE",
+    domain: "identity",
+    description: "BloodHound Community Edition — Active Directory / Entra attack-path mapping (Postgres + Neo4j + the BloodHound app). A detection and analysis target, not itself vulnerable.",
+    repo: "https://github.com/SpecterOps/BloodHound",
+    docsUrl: "https://bloodhound.specterops.io/",
+    engine: "docker",
+    environments: ["local", "remote"],
+    // Upstream example compose runs released images (specterops/bloodhound + postgres + neo4j) with env-var defaults.
+    source: { kind: "compose", repo: "https://github.com/SpecterOps/BloodHound", subdir: "examples/docker-compose" },
+    resources: { cpus: 2, memoryMB: 4096, diskGB: 6 },
+    services: [{ name: "bloodhound", port: 8080, protocol: "http" }],
+    attack: { tactics: ["TA0007 Discovery"], techniques: ["T1087", "T1482"] },
+    sigmaPath: "identity/",
+    isolation: { requiresEgress: true, requiresPublicIp: false },
+    deploy: { available: true },
+    verified: true,   // VPS over SSH 2026-10-11: bloodhound:8080 → HTTP 301, neo4j 7474 → 200
   },
 
   // ── Kubernetes (needs a cluster: catalogued, guided for now) ──

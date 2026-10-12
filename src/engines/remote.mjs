@@ -15,6 +15,71 @@ import { prepareRemote, remoteBindIp, checkRemote } from "../remote.mjs";
 const projectFor = (id, lab) => `rtlab-${id}-${lab}`.replace(/[^a-z0-9_-]/gi, "-").toLowerCase();
 const PROBE = `timeout 3 bash -c 'cat < /dev/null > /dev/tcp/%h/%p' 2>/dev/null && echo open || echo closed`;
 
+// Where bind-mount sources are copied on the server. A runtime bind mount (a config file or directory the lab
+// ships) is resolved by the Docker *daemon*, which here runs on the server — so the source has to exist there,
+// not just on this runner. We mirror each one under this directory and point the compose file at the server path.
+const MOUNT_BASE = "/opt/rtlab/mounts";
+const slug = (s) => String(s).replace(/[^a-z0-9_-]/gi, "-").toLowerCase();
+const shq = (s) => "'" + String(s).replace(/'/g, "'\\''") + "'";
+
+/**
+ * Collect every bind-mount source in a resolved compose spec as a get/set handle, covering both the long form
+ * (`{ type: "bind", source }`, what `docker compose config` emits) and the short `"source:target[:mode]"` string.
+ */
+function bindRefs(spec) {
+  const refs = [];
+  for (const svc of Object.values(spec.services || {})) {
+    const vols = svc?.volumes;
+    if (!Array.isArray(vols)) continue;
+    vols.forEach((v, i) => {
+      if (v && typeof v === "object" && v.type === "bind" && typeof v.source === "string") {
+        refs.push({ get: () => v.source, set: (x) => { v.source = x; } });
+      } else if (typeof v === "string") {
+        const m = v.match(/^([^:]+)(:.+)$/);
+        if (m) refs.push({ get: () => m[1], set: (x) => { vols[i] = x + m[2]; } });
+      }
+    });
+  }
+  return refs;
+}
+
+/**
+ * Copy a lab's local bind-mount sources onto the server and rewrite the compose file to reference the server-side
+ * paths. Only sources under the lab store (LABS_DIR) that exist locally are staged — a daemon path like
+ * /var/run/docker.sock is left untouched. Identical sources (e.g. one config bind-mounted twice) are copied once.
+ * Returns the remote directory used, so destroy can sweep it. No-op for labs without local bind mounts.
+ */
+async function stageBindMounts(l, { p, remote, id, onLog }) {
+  const refs = bindRefs(l.spec).filter((r) => {
+    const s = r.get();
+    return path.isAbsolute(s) && s.startsWith(LABS_DIR + path.sep) && existsSync(s);
+  });
+  if (!refs.length) return null;
+  const remoteLabDir = `${MOUNT_BASE}/${slug(id)}/${slug(l.labId)}`;
+  const wrapperSsh = path.join(p.dir, "ssh");
+  const target = `${remote.username}@${remote.host}`;
+  const map = new Map(); // local source -> remote path (dedupe)
+  let n = 0;
+  for (const r of refs) {
+    const src = r.get();
+    let remotePath = map.get(src);
+    if (!remotePath) {
+      const sub = `${remoteLabDir}/m${n++}`;
+      const base = path.basename(src);
+      remotePath = `${sub}/${base}`;
+      await run("sh", ["-c",
+        `tar -C ${shq(path.dirname(src))} -cf - ${shq(base)} | ` +
+        `${shq(wrapperSsh)} -p ${remote.port} ${shq(target)} ${shq(`mkdir -p ${sub} && tar -C ${sub} -xf -`)}`,
+      ], { env: p.env, timeout: 300_000, onLog });
+      map.set(src, remotePath);
+    }
+    r.set(remotePath);
+  }
+  await writeFile(l.file, JSON.stringify(l.spec, null, 2), { encoding: "utf-8", mode: 0o600 });
+  onLog?.(`staged ${map.size} bind-mount source(s) for ${l.name} onto the server`);
+  return remoteLabDir;
+}
+
 /** TCP ports with a listener on the server (any address), so new labs never collide with what already runs there. */
 async function remoteUsedPorts(remote, id) {
   const p = await prepareRemote(remote, `${id}-ports`);
@@ -66,7 +131,7 @@ export async function deploy(entries, opts) {
     const { spec, cwd, exposed } = await buildSpec(entry, { dir: labDir, bindIp, noEgress: false, onLog, alloc, env: labEnv?.[entry.id] || null });
     const file = path.join(labDir, "rtlab-compose.yml");
     await writeFile(file, JSON.stringify(spec, null, 2), { encoding: "utf-8", mode: 0o600 });
-    labs.push({ labId: entry.id, name: entry.name, file, project: projectFor(id, entry.id), cwd,
+    labs.push({ labId: entry.id, name: entry.name, file, project: projectFor(id, entry.id), cwd, spec,
       services: exposed.map((e) => ({ ...e, url: `${entry.services?.[0]?.protocol === "https" ? "https" : "http"}://${bindIp}:${e.port}` })),
       defaultCreds: entry.defaultCreds || null });
   }
@@ -81,6 +146,9 @@ export async function deploy(entries, opts) {
   if (need.warning) onLog?.(need.warning);
   const p = await prepareRemote(remote, id);
   try {
+    // Runtime bind mounts resolve on the server's daemon, so copy their sources there and repoint the compose file
+    // before starting — otherwise Docker would create empty dirs in place of the lab's config and it would not serve.
+    for (const l of labs) await stageBindMounts(l, { p, remote, id, onLog });
     for (const l of labs) {
       onLog?.(`starting ${l.name} on the server (project ${l.project})…`);
       await run("docker", ["compose", "-f", l.file, "-p", l.project, "up", "-d"], { cwd: l.cwd, timeout: 1_800_000, env: p.env, onLog });
@@ -178,6 +246,9 @@ export async function destroyOrphan(id, { remote, onLog } = {}) {
       onLog?.(`removed project ${project} from the server (${c.length} container(s))`);
     }
     if (!projects.length) onLog?.(`nothing left on the server for ${id}`);
+    // Remove any bind-mount sources we staged for this deployment (fixed, sanitized path — safe to rm -rf).
+    await run(path.join(p.dir, "ssh"), ["-p", String(remote.port), `${remote.username}@${remote.host}`,
+      `rm -rf ${MOUNT_BASE}/${slug(id)}`], { env: p.env, timeout: 60_000 }).catch(() => {});
   } finally { await p.cleanup(); }
   return removed;
 }
