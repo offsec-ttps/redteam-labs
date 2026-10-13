@@ -3,8 +3,9 @@
  *
  * It mirrors the remote engine's model: everything happens on the server, where k3d, kubectl and helm live and
  * where Docker already runs — the cluster's API server is never published to the internet. The one lab service a
- * recipe nominates is exposed on the server's VPN bind address through a NodePort, so the lab is reachable only
- * over the VPN, exactly like the container labs. Destroy deletes the whole cluster, so nothing is left behind.
+ * recipe nominates is published through a NodePort on the server's bind address: the VPN address for a private
+ * deploy (recommended, and what the platform always does), otherwise the server's public IP — exactly like the
+ * container labs. Destroy deletes the whole cluster, so nothing is left behind.
  *
  * Source recipe (`entry.source`):
  *   { kind: "k8s", repo, ref?, setup, expose: { selector: "app=foo", port, namespace? }, teardown? }
@@ -65,6 +66,7 @@ export async function deploy(entries, opts) {
   if (src.kind !== "k8s") throw new Error(`k8s engine: unsupported source kind "${src.kind}"`);
   const expose = src.expose || {};
   const bindIp = await remoteBindIp(remote);
+  if (!remote.bindIp) onLog?.(`no VPN bind address given: the lab's NodePort will be published on ${bindIp} (the server's public IP). Pass --private to keep it on the VPN only.`);
   const nodePort = nodePortFor(id);
   const cluster = clusterFor(id);
   const services = [{ lab: entry.id, name: expose.name || "web", port: nodePort, container: expose.port || 80,
