@@ -21,18 +21,21 @@ import {
 import { candidateBindIps, pickBindIp, freeDiskGB, parseTtl, fmtRemaining } from "../src/net.mjs";
 import { has, capture, run } from "../src/run.mjs";
 import * as state from "../src/state.mjs";
-import { allEntries, findEntry, filterEntries, searchEntries, DOMAINS, SERVICES, SERVICE_APPS } from "../src/catalog/index.mjs";
+import { allEntries, findEntry, filterEntries, searchEntries, DOMAINS, SERVICES, SERVICE_APPS, LABS } from "../src/catalog/index.mjs";
+import { validateLabSpec } from "../src/catalog/lab-spec.mjs";
+import { loadUserLabs, saveUserLabs } from "../src/catalog/user-labs.mjs";
 import * as dockerEngine from "../src/engines/docker.mjs";
 import * as vagrantEngine from "../src/engines/vagrant.mjs";
 import * as terraformEngine from "../src/engines/terraform.mjs";
 import * as spinnerEngine from "../src/engines/spinner.mjs";
 import * as attackRangeEngine from "../src/engines/attackrange.mjs";
 import * as remoteEngine from "../src/engines/remote.mjs";
+import * as k8sEngine from "../src/engines/k8s.mjs";
 import * as arcloudEngine from "../src/engines/arcloud.mjs";
 import { normalizeRemote, checkRemote, PRESETS as REMOTE_PRESETS } from "../src/remote.mjs";
 import * as vpn from "../src/remote-vpn.mjs";
 import { writeFile as writeFileP } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import * as storage from "../src/storage.mjs";
 import { parseLabEnvArgs, validateLabEnv } from "../src/labenv.mjs";
 import * as agent from "../src/agent.mjs";
@@ -43,7 +46,7 @@ import { installService, uninstallService } from "../src/service.mjs";
 import { credsStatus, CREDS_FILE_PATH } from "../src/creds.mjs";
 
 const BOOL = new Set(["--json", "--yes", "-y", "--no-color", "--help", "-h", "--all",
-  "--dry-run", "--no-egress", "--follow", "-f", "--quiet", "--events", "--allow-low-resources", "--kali", "--domain", "--install-docker", "--private", "--purge", "--prune", "--remove-docker", "--destroy-cloud", "--zeek", "--soar", "--es"]);
+  "--dry-run", "--no-egress", "--follow", "-f", "--quiet", "--events", "--allow-low-resources", "--kali", "--domain", "--install-docker", "--private", "--purge", "--prune", "--remove-docker", "--destroy-cloud", "--zeek", "--soar", "--es", "--verify"]);
 
 function parseArgs(list) {
   const pos = []; const flags = {};
@@ -64,7 +67,7 @@ configureUi({ color: !flags["no-color"], json: flags.json, yes: flags.yes || fla
 const DRY = !!flags["dry-run"];
 const MIN_FREE_GB = Number(process.env.RTLAB_MIN_FREE_GB || 10);
 
-const ENGINES = { vm: vagrantEngine, terraform: terraformEngine, docker: dockerEngine, spinner: spinnerEngine, "attack-range": attackRangeEngine, remote: remoteEngine, arcloud: arcloudEngine };
+const ENGINES = { vm: vagrantEngine, terraform: terraformEngine, docker: dockerEngine, spinner: spinnerEngine, "attack-range": attackRangeEngine, remote: remoteEngine, k8s: k8sEngine, arcloud: arcloudEngine };
 const engineFor = (entry) => ENGINES[entry.engine] || dockerEngine;
 
 /** `user@host[:port]` plus --ssh-key / --ssh-password-env / --bind -> a validated remote target (secrets are read, never stored). */
@@ -83,7 +86,7 @@ function remoteFromFlags(spec, saved = null) {
 }
 /** For stop/start/destroy/logs/status of a remote deployment: credentials come from flags, or the paths recorded at deploy time. */
 function engineOpts(dep) {
-  if (dep.engine !== "remote") return { onLog: logger };
+  if (dep.engine !== "remote" && dep.engine !== "k8s") return { onLog: logger };
   const given = flags.remote || flags["ssh-key"] || flags["ssh-password-env"];
   const saved = dep.remote?.spec && (dep.remote.keyFile ? existsSync(dep.remote.keyFile) : !!dep.remote.passwordEnv && !!process.env[dep.remote.passwordEnv]);
   if (!given && !saved) return { onLog: logger, remote: null };    // no credentials at hand (a runner-made deployment): act on the record only
@@ -537,6 +540,151 @@ async function cmdRemoteDeploy() {
   out({ ok: true, ...row });
 }
 
+async function cmdK8sDeploy() {
+  const id = String(flags.lab || flags.labs || "").split(",").map((x) => x.trim()).filter(Boolean)[0];
+  if (!id) die("usage: rtlab k8s deploy --lab <lab-id> --remote user@host[:port] (--ssh-key <file> | --ssh-password-env <VAR>) [--bind <ip>] [--private]");
+  const entry = findEntry(id) || die(`unknown lab "${id}" — try \`rtlab search ${id}\``);
+  if (entry.engine !== "k8s" || !entry.deploy.available) die(`"${entry.id}" is not a deployable Kubernetes lab`);
+  if (entry.source?.kind !== "k8s") die(`"${entry.id}" has no k8s deploy recipe (source.kind must be "k8s")`);
+  if (flags.private && !flags.bind) flags.bind = flags.address || vpn.DEFAULTS.address;   // --private: NodePort on the VPN address only
+  const remote = remoteFromFlags(flags.remote);
+  const ttlMs = (() => { try { return parseTtl(flags.ttl ?? "4h"); } catch (e) { die(e.message); } })();
+  if (!DRY) {
+    await state.ensureDirs();
+    vulnerableBanner(entry.name);
+    if (remote.bindIp && remote.bindIp !== remote.host) info(`the lab will listen on ${remote.bindIp} only (private; reachable through the VPN)`);
+    else warn(`the lab will listen on ${remote.host}; a server on the internet exposes it unless firewalled (use --private after \`rtlab remote vpn setup\`)`);
+  }
+  const depId = `k8s-${Math.random().toString(36).slice(2, 8)}`;
+  step(`${DRY ? "Planning" : "Deploying"} ${entry.id} as a k3d cluster on ${bold(remote.label)} ${dim(`(${remote.username}@${remote.host}:${remote.port})`)}`);
+  let res;
+  try { res = await k8sEngine.deploy([entry], { id: depId, remote, dryRun: DRY, onLog: logger }); }
+  catch (e) { die(`deploy failed: ${e.message}`); }
+  if (DRY) { ok("Dry run — no cluster was created."); return out({ dryRun: true, id: depId, ...res }); }
+  const row = {
+    id: depId, labId: entry.id, name: `k8s (${remote.label})`, engine: "k8s",
+    cluster: res.cluster, bindIp: res.bindIp, nodePort: res.nodePort, labs: res.labs, services: res.services,
+    remote: { host: remote.host, port: remote.port, username: remote.username, label: remote.label, bindIp: res.bindIp, spec: `${remote.username}@${remote.host}:${remote.port}`,
+      keyFile: remote.auth.kind === "keyfile" && !remote.auth.keyFile.includes("/rtlab-ssh-") ? remote.auth.keyFile : null, passwordEnv: flags["ssh-password-env"] || null, fingerprint: res.fingerprint || null },
+    status: res.status, createdAt: new Date().toISOString(),
+    ttl: flags.ttl ?? "4h", expiresAt: ttlMs ? new Date(Date.now() + ttlMs).toISOString() : null,
+  };
+  await state.add(row);
+  if (res.ready === false) warn("cluster is up, but the lab service port never answered from the server itself");
+  else ok("the Kubernetes lab is up on the server");
+  for (const s of res.services) info(`${String(s.lab).padEnd(14)} ${s.url}`);
+  info(`id ${depId}   ttl ${row.ttl}${row.expiresAt ? ` (expires ${fmtRemaining(row.expiresAt)})` : ""}`);
+  out({ ok: true, ...row });
+}
+
+// ── Lab onboarding pipeline: add/import a lab spec to the user catalog, optionally verify it on a VPS ──
+const CURATED_IDS = LABS.map((e) => e.id);
+const QA_STATUS_URL = new URL("../qa/test-status.json", import.meta.url);
+
+function num(v) { if (v === undefined) return undefined; const n = Number(v); return Number.isFinite(n) ? n : undefined; }
+
+/** Assemble a lab spec object from CLI flags (the `rtlab lab add` form). */
+function specFromFlags(f) {
+  const kind = f.kind;
+  const repo = f["github-url"] || f.repo;
+  const src = { kind };
+  if (kind === "image") { src.image = f.image; if (f.port) src.port = num(f.port); }
+  else if (kind === "build") { src.repo = repo; if (f.port) src.port = num(f.port); if (f.subdir) src.subdir = f.subdir; if (f.dockerfile) src.dockerfile = f.dockerfile; }
+  else if (kind === "compose") { src.repo = repo; if (f.subdir) src.subdir = f.subdir; if (f["compose-file"]) src.file = f["compose-file"]; if (f.port) src.port = num(f.port); }
+  else if (kind === "vulhub") { src.path = f["vulhub-path"]; if (f.port) src.port = num(f.port); }
+  else if (kind === "k8s") { src.repo = repo; src.setup = f.setup; src.expose = { selector: f["expose-selector"], port: num(f["expose-port"]) || 80 }; }
+  else if (kind === "terraform") { src.repo = repo; src.provider = f.provider; src.tfDir = f["tf-dir"]; }
+  if (f.ref) src.ref = f.ref;
+  if (f.protocol) src.protocol = f.protocol;
+  // `--domain` is a global boolean (attack-range), so a lab's domain comes from --lab-domain (JSON specs use "domain").
+  return {
+    id: f.id, name: f.name, domain: f["lab-domain"] || (typeof f.domain === "string" ? f.domain : undefined), description: f.description, repo, engine: f.engine, source: src,
+    serviceName: f["service-name"],
+    resources: f.mem ? { cpus: num(f.cpus) || 1, memoryMB: num(f.mem), diskGB: num(f.disk) || 2 } : undefined,
+  };
+}
+
+/** Deploy the lab on a VPS, record whether it came up reachable, then destroy it. Returns { ready }. */
+async function verifyLabOnVps(entry, remote) {
+  const depId = `verify-${Math.random().toString(36).slice(2, 8)}`;
+  const engine = entry.engine === "k8s" ? k8sEngine : remoteEngine;
+  step(`Verifying ${entry.id} on ${bold(remote.label)} ${dim(`(${remote.username}@${remote.host})`)}`);
+  const res = await engine.deploy([entry], { id: depId, remote, onLog: logger });
+  const ready = res.ready !== false;
+  const dep = { id: depId, engine: entry.engine, cluster: res.cluster, dir: res.dir, labs: res.labs, bindIp: res.bindIp };
+  info("tearing the verification deployment down…");
+  try { await engine.destroy(dep, { remote, onLog: logger }); } catch (e) { warn(`cleanup warning: ${e.message}`); }
+  return { ready, services: res.services || [] };
+}
+
+/** Record a verify result in qa/test-status.json (vps column) when that file is present. */
+function recordVpsStatus(id, entry, verdict) {
+  try {
+    if (!existsSync(QA_STATUS_URL)) return;
+    const d = JSON.parse(readFileSync(QA_STATUS_URL, "utf-8"));
+    const labs = d.labs || d;
+    labs[id] = labs[id] || { domain: entry.domain, engine: entry.engine, local: "untested", vps: "na", cloud: "na" };
+    labs[id].vps = verdict;
+    writeFileSync(QA_STATUS_URL, JSON.stringify(d, null, 2) + "\n");
+    info(`recorded ${id} vps=${verdict} in qa/test-status.json`);
+  } catch (e) { warn(`could not update qa/test-status.json: ${e.message}`); }
+}
+
+async function onboardLab(spec) {
+  const { ok: valid, errors, normalized } = validateLabSpec(spec, { existingIds: CURATED_IDS });
+  if (!valid) die(`invalid lab spec:\n  - ${errors.join("\n  - ")}`);
+  const labs = loadUserLabs();
+  const replacing = labs.some((l) => l.id === normalized.id);
+  const next = labs.filter((l) => l.id !== normalized.id).concat([normalized]);
+  saveUserLabs(next);
+  ok(`${replacing ? "updated" : "added"} ${normalized.id} ${dim(`(${normalized.engine}/${normalized.source.kind})`)} in the user catalog`);
+
+  if (flags.verify) {
+    if (!flags.remote) die("--verify needs a target: --remote user@host[:port] with --ssh-key <file> or --ssh-password-env <VAR>");
+    if (normalized.engine === "terraform") { warn("terraform labs can't be verified without cloud credentials — registered, not verified."); return out({ ok: true, id: normalized.id, verified: false, entry: normalized }); }
+    if (flags.private && !flags.bind) flags.bind = flags.address || vpn.DEFAULTS.address;
+    const remote = remoteFromFlags(flags.remote);
+    await state.ensureDirs();
+    let v;
+    try { v = await verifyLabOnVps(normalized, remote); }
+    catch (e) { recordVpsStatus(normalized.id, normalized, "red"); die(`verify failed (registered, marked red): ${e.message}`); }
+    recordVpsStatus(normalized.id, normalized, v.ready ? "green" : "red");
+    if (v.ready) ok(`verified: ${normalized.id} deployed, was reachable, and was destroyed cleanly`);
+    else warn(`${normalized.id} deployed but its service never answered — marked red`);
+    return out({ ok: true, id: normalized.id, verified: v.ready, entry: normalized });
+  }
+  out({ ok: true, id: normalized.id, verified: false, entry: normalized });
+}
+
+async function cmdLab(sub, arg) {
+  if (sub === "list" || sub === "ls") {
+    const labs = loadUserLabs();
+    if (!labs.length) { info("no user labs yet — add one with `rtlab lab add` or `rtlab lab import <spec.json>`"); return out([]); }
+    for (const l of labs) plain(`  ${l.id.padEnd(24)} ${String(l.engine + "/" + l.source?.kind).padEnd(16)} ${l.verified ? grn("verified") : dim("unverified")}  ${l.name}`);
+    return out(labs);
+  }
+  if (sub === "show") {
+    const l = loadUserLabs().find((x) => x.id === arg) || die(`no user lab "${arg}"`);
+    return out(l);
+  }
+  if (sub === "remove" || sub === "rm") {
+    const labs = loadUserLabs();
+    if (!labs.some((l) => l.id === arg)) die(`no user lab "${arg}"`);
+    saveUserLabs(labs.filter((l) => l.id !== arg));
+    return ok(`removed ${arg} from the user catalog`);
+  }
+  if (sub === "import") {
+    if (!arg) die("usage: rtlab lab import <spec.json> [--verify --remote … --ssh-key …]");
+    let spec; try { spec = JSON.parse(readFileSync(arg, "utf-8")); } catch (e) { die(`cannot read spec: ${e.message}`); }
+    return onboardLab(spec);
+  }
+  if (sub === "add") {
+    if (!flags.kind) die("usage: rtlab lab add --id <id> --name <name> --kind <image|build|compose|vulhub|k8s|terraform> [source flags] [--verify …]\n  image: --image <img> --port <p>\n  compose/build: --github-url <url> [--subdir <d>] [--compose-file <f>] [--port <p>]\n  vulhub: --vulhub-path <app/CVE> [--port <p>]\n  k8s: --github-url <url> --setup \"<cmd>\" --expose-selector app=foo [--expose-port 80]\n  terraform: --github-url <url> --provider aws --tf-dir <dir>");
+    return onboardLab(specFromFlags(flags));
+  }
+  die("usage: rtlab lab add|import|list|show|remove …");
+}
+
 async function cmdSpinnerDeploy() {
   const os = flags.os || "ubuntu";
   const ids = String(flags.labs || "").split(",").map((x) => x.trim()).filter(Boolean);
@@ -913,6 +1061,11 @@ try {
       else if (a1 === "presets") out(REMOTE_PRESETS);
       else if (a1 === "reset") await cmdRemoteReset();
       else die("usage: rtlab remote check <user@host[:port]> | rtlab remote deploy --labs … --remote user@host[:port] (--ssh-key <file> | --ssh-password-env <VAR>) | rtlab remote reset --remote … [--remove-docker] [--dry-run]");
+      break;
+    case "lab": await cmdLab(a1, a2); break;
+    case "k8s":
+      if (a1 === "deploy") await cmdK8sDeploy();
+      else die("usage: rtlab k8s deploy --lab <lab-id> --remote user@host[:port] (--ssh-key <file> | --ssh-password-env <VAR>) [--bind <ip>] [--private] [--ttl <dur>]");
       break;
     case "spinner":
       if (a1 === "deploy") await cmdSpinnerDeploy();

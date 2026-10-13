@@ -52,7 +52,7 @@
     "domain": "k8s",
     "engine": "k8s",
     "local": "untested",
-    "vps": "na",
+    "vps": "green",
     "cloud": "na"
   },
   "awsgoat": {

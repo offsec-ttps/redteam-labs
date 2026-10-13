@@ -208,24 +208,22 @@ export const LABS = [
     repo: "https://github.com/madhuakula/kubernetes-goat",
     docsUrl: "https://madhuakula.com/kubernetes-goat/",
     engine: "k8s",
-    environments: ["local"],
-    source: { kind: "compose", repo: "https://github.com/madhuakula/kubernetes-goat" },
-    resources: { cpus: 4, memoryMB: 8192, diskGB: 20 },
-    services: [{ name: "landing", port: 1234, protocol: "http" }],
+    environments: ["local", "remote"],
+    // k8s engine: a disposable k3d cluster is created on the server over SSH, the repo's own setup script applies
+    // all scenarios (kubectl + helm), and the landing pod is published on the VPN address via a NodePort.
+    source: {
+      kind: "k8s",
+      repo: "https://github.com/madhuakula/kubernetes-goat",
+      setup: 'bash setup-kubernetes-goat.sh --kubeconfig "$KUBECONFIG"',
+      expose: { selector: "app=kubernetes-goat-home", port: 80 },
+    },
+    resources: { cpus: 2, memoryMB: 4096, diskGB: 12 },
+    services: [{ name: "landing", port: 80, protocol: "http" }],
     attack: { tactics: ["TA0004 Privilege Escalation"], techniques: ["T1611", "T1613", "T1525", "T1610", "T1609"] },
     sigmaPath: "cloud/k8s/",
     isolation: { requiresEgress: true, requiresPublicIp: false },
-    deploy: {
-      available: false,
-      guidedSteps: [
-        "Create a local cluster: kind create cluster --name goat  (or minikube start)",
-        "git clone https://github.com/madhuakula/kubernetes-goat",
-        "cd kubernetes-goat && bash setup-kubernetes-goat.sh",
-        "bash access-kubernetes-goat.sh   # port-forwards the scenarios",
-        "Pair with Falco or Tetragon for runtime detection telemetry.",
-      ],
-    },
-    verified: false,
+    deploy: { available: true },
+    verified: true,   // VPS over SSH 2026-10-13: k3d cluster, 16 pods, landing NodePort → HTTP 200, public refused, clean destroy
   },
 
   // ── Cloud (Terraform engine — rtlab plans, you approve the spend) ──

@@ -2,6 +2,7 @@
 
 import { LABS } from "./labs.mjs";
 import { IMPORTED_LABS } from "./imported.mjs";
+import { USER_LABS } from "./user-labs.mjs";
 import { serviceEntries, SERVICES, SERVICE_APPS } from "./services.mjs";
 
 /**
@@ -27,6 +28,10 @@ export function allEntries() {
   const take = (e) => { ids.add(e.id); const r = specificRepo(e.repo); if (r) repos.add(r); names.add(nameKey(e.name)); };
   LABS.forEach(take);
 
+  // User-onboarded labs (pipeline): win over imported, but a curated LABS id always wins over a user lab.
+  const userLabs = [];
+  for (const e of USER_LABS) { if (ids.has(e.id)) continue; take(e); userLabs.push(e); }
+
   // The research set lists some labs under several domains (TerraGoat appears in
   // cloud, cicd and iac) and under vendor-prefixed names ("OWASP WebGoat" vs the
   // curated "WebGoat"). Drop those twins on id, specific repo, or name — but NOT
@@ -39,7 +44,7 @@ export function allEntries() {
     imported.push(e);
   }
   // spinnerEligible: can run as containers inside a spinner VM (auto-deployable docker labs)
-  return [...LABS, ...imported, ...serviceEntries()]
+  return [...LABS, ...userLabs, ...imported, ...serviceEntries()]
     .map((e) => ({ ...e, spinnerEligible: e.engine === "docker" && !!e.deploy?.available }));
 }
 

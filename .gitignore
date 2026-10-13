@@ -33,3 +33,23 @@ id_ed25519_vps*
 
 # student VPN configs (private keys): never commit
 vpn-peers/
+*.conf
+
+# python bytecode caches (engine shims)
+__pycache__/
+*.pyc
+
+# local dev artifacts / media / scratch (never commit)
+*.mkv
+*.mp4
+*.pdf
+*.docx
+.soak-diag.txt
+blog-assets/
+brochure/
+docs/blog/
+plan.py
+scripts/blog.mjs
+scripts/soak.mjs
+.claude/
+.claude-tmp/

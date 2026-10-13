@@ -9,7 +9,7 @@ test("placement per archetype", () => {
   assert.equal(runtimeOf(ar), "vm"); assert.deepEqual(placement(ar).targets, ["aws", "azure", "gcp", "local", "vps"]); assert.equal(placement(ar).presets.length, 20); assert.equal(placement(ar).recommended, "aws");
   assert.equal(runtimeOf(aws), "cloud"); assert.deepEqual(placement(aws).targets, ["aws"]); assert.equal(placement(aws).cloudOnly, true);
   assert.equal(runtimeOf(ms3), "vm"); assert.equal(placement(ms3).recommended, "local"); assert.deepEqual(placement(ms3).vps.needs, ["virtualization"]);
-  assert.equal(runtimeOf(kg), "guided");   // until the k3d runtime lands
+  assert.equal(runtimeOf(kg), "k8s"); assert.deepEqual(placement(kg).targets, ["vps", "local"]); assert.equal(placement(kg).recommended, "vps");   // k3d-on-VPS runtime
 });
 
 test("fit on a VPS uses the measured size and says when only the cloud will do", () => {
