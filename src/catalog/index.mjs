@@ -1,9 +1,15 @@
 /** Catalog lookup/search over labs + service-CVE entries. */
 
+import { readFileSync } from "node:fs";
 import { LABS } from "./labs.mjs";
 import { IMPORTED_LABS } from "./imported.mjs";
 import { USER_LABS } from "./user-labs.mjs";
 import { serviceEntries, SERVICES, SERVICE_APPS } from "./services.mjs";
+
+// Ids explicitly removed from the catalog (non-existent repos, hosted platforms, and
+// security TOOLS/datasets that are not attackable labs — those live in the Tools section).
+// catalog-removed.json is an id -> {name,domain,repo,reason} map; its keys are the removed ids.
+const REMOVED = new Set(Object.keys(JSON.parse(readFileSync(new URL("./catalog-removed.json", import.meta.url), "utf-8"))));
 
 /**
  * Every catalogued entry. Order of precedence matters:
@@ -44,7 +50,9 @@ export function allEntries() {
     imported.push(e);
   }
   // spinnerEligible: can run as containers inside a spinner VM (auto-deployable docker labs)
+  // Drop any entry on the removed list (tools/datasets and dead repos) — the catalog is labs only.
   return [...LABS, ...userLabs, ...imported, ...serviceEntries()]
+    .filter((e) => !REMOVED.has(e.id))
     .map((e) => ({ ...e, spinnerEligible: e.engine === "docker" && !!e.deploy?.available }));
 }
 
